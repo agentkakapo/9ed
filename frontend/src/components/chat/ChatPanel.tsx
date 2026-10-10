@@ -1,5 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useRef, useState } from 'react';
 import { normalizeWorkDir, sessionBelongsToWorkDir, useChatStore } from '../../stores/chat';
 import { useWorkspaceStore } from '../../stores/workspace';
 import { useChatSession } from '../../hooks/useChatSession';
@@ -9,7 +8,6 @@ import { ChatInput } from './ChatInput';
 import { ChatQueue } from './ChatQueue';
 import { PermissionDialog } from './PermissionDialog';
 import { ConfigBar } from './AgentPicker';
-import { ChatTabs } from './ChatTabs';
 import { ChatSessionList } from './ChatSessionList';
 import type { ChatSessionInfo } from '../../types';
 
@@ -22,8 +20,8 @@ function formatDebugTimestamp(timestamp: number): string {
 
 function ChatDebugIcon() {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M7 4h6l1 2h2a1 1 0 0 1 1 1v6a3 3 0 0 1-3 3h-1l-2 2h-2l-2-2H6a3 3 0 0 1-3-3V7a1 1 0 0 1 1-1h2l1-2Z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+      <path d="M7 4h6l1 2h2a1 1 0 0 1 1 1v6a3 3 0 0 1-3 3h-1l-2 2h-2l-2-2H6a3 3 0 0 1-3-3V7a1 1 0 0 1 1-1h2l1-2Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
       <circle cx="8" cy="10" r="1.2" fill="currentColor" />
       <circle cx="12" cy="10" r="1.2" fill="currentColor" />
     </svg>
@@ -104,17 +102,13 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
   const loadAgents = useChatStore((s) => s.loadAgents);
   const createSessionStore = useChatStore((s) => s.createSession);
   const setActiveSession = useChatStore((s) => s.setActiveSession);
-  const deleteSessionStore = useChatStore((s) => s.deleteSession);
   const resumeSession = useChatStore((s) => s.resumeSession);
   const restoring = useChatStore((s) => s.restoring);
   const lastRestoreError = useChatStore((s) => s.lastRestoreError);
   const { sendMessage, cancel, setConfigOption, respondPermission, rejectPermission, setAutoApprove, connected } = useChatSession();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const autoResumeKeysRef = useRef<Set<string>>(new Set());
-  const createMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const [creating, setCreating] = useState(false);
-  const [createMenuOpen, setCreateMenuOpen] = useState(false);
-  const [createMenuStyle, setCreateMenuStyle] = useState<Record<string, string>>({});
   const [agentsLoading, setAgentsLoading] = useState(agents.length === 0);
   const [agentsError, setAgentsError] = useState<string | null>(null);
   const [showChatDebugPanel, setShowChatDebugPanel] = useState(false);
@@ -226,97 +220,6 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
     }
   }, [activeSession?.stalled]);
 
-  useLayoutEffect(() => {
-    if (!createMenuOpen || !createMenuButtonRef.current) return;
-
-    const updatePosition = () => {
-      if (!createMenuButtonRef.current) return;
-      const rect = createMenuButtonRef.current.getBoundingClientRect();
-      const width = Math.min(280, Math.max(220, Math.floor(window.innerWidth * 0.72)));
-      const left = Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12));
-      const top = Math.min(rect.bottom + 6, window.innerHeight - 24);
-      const maxHeight = Math.max(160, Math.min(320, window.innerHeight - top - 12));
-      setCreateMenuStyle({
-        position: 'fixed',
-        top: `${top}px`,
-        left: `${left}px`,
-        width: `${width}px`,
-        maxHeight: `${maxHeight}px`,
-      });
-    };
-
-    updatePosition();
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
-    return () => {
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
-    };
-  }, [createMenuOpen]);
-
-  useEffect(() => {
-    if (!createMenuOpen) return;
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (createMenuButtonRef.current?.contains(target)) return;
-      const overlay = document.querySelector('.chat-agent-create-dropdown');
-      if (overlay?.contains(target)) return;
-      setCreateMenuOpen(false);
-    };
-
-    document.addEventListener('mousedown', handlePointerDown);
-    return () => document.removeEventListener('mousedown', handlePointerDown);
-  }, [createMenuOpen]);
-
-  const handleNewChat = async (agentId: string) => {
-    const agent = agents.find((a) => a.id === agentId);
-    if (!agent?.available) return;
-
-    setSelectedAgent(agentId);
-    setCreateMenuOpen(false);
-    setCreating(true);
-    try {
-      const terminalEnabled = useActiveTerminal && !!activeTerminalId;
-      const browserTabId = activeProject?.activeBrowserTabId ?? null;
-      const browserEnabled = useActiveBrowser && !!browserTabId;
-      const created = await createChatSession(agentId, activeProject?.path, terminalEnabled, terminalEnabled ? activeTerminalId : undefined, browserEnabled, browserTabId);
-      const session: ChatSessionInfo = {
-        id: created.id,
-        recordId: created.resumedFrom ?? created.id,
-        agentId,
-        title: agent.label ?? 'Chat',
-        messages: [],
-        status: 'idle',
-        createdAt: Date.now(),
-        kind: 'live',
-        workDir: created.workDir ?? activeProject?.path,
-        acpSessionId: created.acpSessionId,
-        useActiveTerminal: terminalEnabled,
-        terminalId: terminalEnabled ? activeTerminalId : undefined,
-        useActiveBrowser: browserEnabled,
-        browserSelection: browserEnabled ? browserSelection : null,
-        browserSelectionMode,
-        browserSelectionCapture: browserEnabled ? browserSelectionCapture : null,
-      };
-      createSessionStore(session);
-    } catch {
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const availableAgents = agents.filter((agent) => agent.available);
-  const canCreateChat = !creating && !agentsLoading && availableAgents.length > 0;
-
-  const handleCloseTab = (sessionId: string) => {
-    const idx = projectSessions.findIndex((s) => s.id === sessionId);
-    if (activeSessionId === sessionId) {
-      const fallback = projectSessions[idx + 1] ?? projectSessions[idx - 1] ?? null;
-      setActiveSession(fallback?.id ?? null);
-    }
-    deleteSessionStore(sessionId);
-  };
-
   const handleSend = async (content: string, attachments?: import('./ChatInput').Attachment[]) => {
     if (!activeSession) {
       const available = agents.filter((a) => a.available);
@@ -409,68 +312,22 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
               </span>
             )}
           </div>
-          {projectSessions.length > 1 && (
-            <ChatTabs
-              tabs={projectSessions}
-              activeTabId={activeSessionId}
-              agents={agents}
-              onSelectTab={setActiveSession}
-              onCloseTab={handleCloseTab}
-            />
-          )}
         </div>
         <div className="chat-header-actions">
-          <ChatSessionList />
-          {activeSession && (
-            <button
-              className={`chat-new-btn chat-new-btn-icon${showChatDebugPanel ? ' active' : ''}`}
-              type="button"
-              title={showChatDebugPanel ? 'Hide chat debug panel' : 'Show chat debug panel'}
-              aria-label={showChatDebugPanel ? 'Hide chat debug panel' : 'Show chat debug panel'}
-              onClick={() => setShowChatDebugPanel((value) => !value)}
-            >
-              <span className="chat-debug-btn-icon"><ChatDebugIcon /></span>
-            </button>
-          )}
-          <div className="chat-agent-create-wrap">
-            <button
-              ref={createMenuButtonRef}
-              className="chat-new-btn chat-new-btn-icon"
-              onClick={() => canCreateChat && setCreateMenuOpen((open) => !open)}
-              type="button"
-              aria-label={creating ? 'Creating new chat' : 'New chat'}
-              aria-haspopup="menu"
-              aria-expanded={createMenuOpen}
-              title={creating ? 'Creating new chat...' : agentsLoading ? 'Loading agents...' : 'New chat'}
-              disabled={!canCreateChat}
-            >
-              {creating ? <span className="chat-connecting-spinner chat-inline-spinner" /> : '+'}
-            </button>
-            {createMenuOpen ? createPortal(
-              <div
-                className="picker-dropdown picker-dropdown-overlay chat-agent-create-dropdown"
-                data-overlay="true"
-                role="menu"
-                aria-label="Create chat with agent"
-                style={createMenuStyle}
+          <div className="pane-toggles-group">
+            <ChatSessionList />
+            {activeSession && (
+              <button
+                type="button"
+                className={`pane-toggle-btn chat-debug-btn${showChatDebugPanel ? ' active' : ''}`}
+                title={showChatDebugPanel ? 'Hide chat debug log' : 'Show chat debug log'}
+                aria-label={showChatDebugPanel ? 'Hide chat debug log' : 'Show chat debug log'}
+                onClick={() => setShowChatDebugPanel((value) => !value)}
               >
-                {agents.map((agent) => (
-                  <button
-                    key={agent.id}
-                    className="picker-dropdown-item chat-agent-create-item"
-                    data-available={agent.available ? 'true' : 'false'}
-                    onClick={() => agent.available && void handleNewChat(agent.id)}
-                    disabled={!agent.available || creating}
-                    type="button"
-                    role="menuitem"
-                  >
-                    <span>{agent.label}</span>
-                    {!agent.available && <span className="chat-agent-create-unavailable">Unavailable</span>}
-                  </button>
-                ))}
-              </div>,
-              document.body,
-            ) : null}
+                <ChatDebugIcon />
+                <span>Debug</span>
+              </button>
+            )}
           </div>
           {auxiliaryToggles}
         </div>

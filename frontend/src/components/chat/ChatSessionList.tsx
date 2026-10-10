@@ -33,6 +33,15 @@ function SessionStatusIcon({ status, kind }: { status: string; kind: string }) {
   }
 }
 
+function HistoryIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.4" />
+      <polyline points="10,6 10,10 13,12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function ChatSessionList() {
   const sessions = useChatStore((s) => s.sessions);
   const activeSessionId = useChatStore((s) => s.activeSessionId);
@@ -206,13 +215,19 @@ export function ChatSessionList() {
     <div className="chat-picker-wrap chat-session-wrap">
       <button
         ref={triggerRef}
-        className="chat-history-btn"
+        className={`pane-toggle-btn chat-history-btn${open ? ' active' : ''}`}
         onClick={() => !loadingHistorySessionId && setOpen(!open)}
         type="button"
         title="Chat history"
+        aria-label="Chat history"
         disabled={loadingHistorySessionId !== null}
       >
-        {loadingHistorySessionId ? <span className="chat-connecting-spinner chat-inline-spinner" /> : '📋'}
+        {loadingHistorySessionId ? (
+          <span className="chat-connecting-spinner chat-inline-spinner" />
+        ) : (
+          <HistoryIcon />
+        )}
+        <span>History</span>
       </button>
       {open ? createPortal(dropdownContent, document.body) : null}
     </div>

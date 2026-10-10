@@ -118,18 +118,11 @@ describe('ChatPanel new chat', () => {
       root.render(<ChatPanel />);
     });
 
-    const newChatButton = container.querySelector('.chat-new-btn-icon');
-    expect(newChatButton).not.toBeNull();
+    const chipButton = container.querySelector('.chat-suggestion-chip');
+    expect(chipButton).not.toBeNull();
 
     await act(async () => {
-      newChatButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-
-    const agentButton = document.body.querySelector('.chat-agent-create-item');
-    expect(agentButton).not.toBeNull();
-
-    await act(async () => {
-      agentButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      chipButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
     expect(createChatSession).toHaveBeenCalledWith('opencode', '/repo', false, undefined, false, null);

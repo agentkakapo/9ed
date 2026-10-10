@@ -96,6 +96,31 @@ function GitIcon() {
   );
 }
 
+function ChatTabIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 4h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-8l-4 3.5V14H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function FilesTabIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2 5a1 1 0 0 1 1-1h4.5a1 1 0 0 1 .7.3l1.6 1.7H17a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SearchTabIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="12.5" y1="12.5" x2="16.5" y2="16.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function SidebarToggleIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -432,32 +457,36 @@ export function IDEWorkspace() {
               onClick={() => setActivePanel('sessions')}
               type="button"
               title="Chat Sessions"
+              aria-label="Chats"
             >
-              Chats
+              <ChatTabIcon />
             </button>
             <button
               className={`sidebar-nav-tab${activePanel === 'explorer' ? ' active' : ''}`}
               onClick={() => setActivePanel('explorer')}
               type="button"
               title="Project Files"
+              aria-label="Files"
             >
-              Files
+              <FilesTabIcon />
             </button>
             <button
               className={`sidebar-nav-tab${activePanel === 'git' ? ' active' : ''}`}
               onClick={() => setActivePanel('git')}
               type="button"
               title="Git Source Control"
+              aria-label="Git"
             >
-              Git
+              <GitIcon />
             </button>
             <button
               className={`sidebar-nav-tab${activePanel === 'search' ? ' active' : ''}`}
               onClick={() => setActivePanel('search')}
               type="button"
               title="Search Files"
+              aria-label="Search"
             >
-              Search
+              <SearchTabIcon />
             </button>
           </div>
 
