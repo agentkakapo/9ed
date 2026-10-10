@@ -148,7 +148,8 @@ export async function restoreWorkspaceState(projectPath: string, projectId: stri
     }
 
     if (saved?.sidebarPanel) {
-      store.setActivePanel(saved.sidebarPanel as import('../types').ActivePanel);
+      const targetPanel = saved.sidebarPanel === 'projects' ? 'sessions' : saved.sidebarPanel;
+      store.setActivePanel(targetPanel as import('../types').ActivePanel);
     }
 
     if (saved?.chatVisible !== undefined) {

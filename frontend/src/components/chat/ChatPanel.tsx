@@ -59,12 +59,41 @@ function ContextUsageBar({ contextUsed, contextWindow, costAmount, costCurrency 
   );
 }
 
-export function ChatPanel() {
+const agentGlyphs: Record<string, string> = {
+  antigravity: '◈',
+  claude: '⚑',
+  codex: '⚡',
+  gemini: '✦',
+  pi: 'π',
+  amp: '▲',
+  copilot: '⬡',
+  opencode: '⌥',
+};
+
+function SidebarToggleIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.4" />
+      <line x1="8" y1="3" x2="8" y2="17" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+export type ChatPanelProps = {
+  auxiliaryToggles?: React.ReactNode;
+  onToggleSidebar?: () => void;
+  sidebarVisible?: boolean;
+};
+
+export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }: ChatPanelProps = {}) {
   const activeSessionId = useChatStore((s) => s.activeSessionId);
   const activeProject = useWorkspaceStore((s) => s.projects.find((p) => p.id === s.activeProjectId) ?? null);
   const agents = useChatStore((s) => s.agents);
   const sessions = useChatStore((s) => s.sessions);
+  const historySessions = useChatStore((s) => s.historySessions);
+  const loadHistorySession = useChatStore((s) => s.loadHistorySession);
   const activeSessionByWorkDir = useChatStore((s) => s.activeSessionByWorkDir);
+  const selectedAgentId = useChatStore((s) => s.selectedAgentId);
   const setSelectedAgent = useChatStore((s) => s.setSelectedAgent);
   const useActiveTerminal = useChatStore((s) => s.useActiveTerminal);
   const useActiveBrowser = useChatStore((s) => s.useActiveBrowser);
@@ -170,8 +199,20 @@ export function ChatPanel() {
     const fallback = remembered ?? projectSessions[projectSessions.length - 1] ?? null;
     if ((activeSessionId ?? null) !== (fallback?.id ?? null)) {
       setActiveSession(fallback?.id ?? null);
+      return;
     }
-  }, [activeProject?.path, activeSession, activeSessionId, projectSessionIds, projectSessions, rememberedProjectSessionId, setActiveSession]);
+
+    if (projectSessions.length === 0 && !restoring) {
+      const projectHistory = historySessions.filter((h) => sessionBelongsToWorkDir(h, activeProject.path));
+      if (projectHistory.length > 0) {
+        const latest = projectHistory[0];
+        if (latest && !autoResumeKeysRef.current.has(latest.id)) {
+          autoResumeKeysRef.current.add(latest.id);
+          void loadHistorySession(latest.id).catch(() => {});
+        }
+      }
+    }
+  }, [activeProject?.path, activeSession, activeSessionId, historySessions, loadHistorySession, projectSessionIds, projectSessions, rememberedProjectSessionId, restoring, setActiveSession]);
 
   const messages = activeSession?.messages;
   const lastMsgContent = messages?.[messages.length - 1]?.content;
@@ -276,7 +317,51 @@ export function ChatPanel() {
     deleteSessionStore(sessionId);
   };
 
-  const handleSend = (content: string, attachments?: import('./ChatInput').Attachment[]) => {
+  const handleSend = async (content: string, attachments?: import('./ChatInput').Attachment[]) => {
+    if (!activeSession) {
+      const available = agents.filter((a) => a.available);
+      const agentId = (selectedAgentId && agents.some((a) => a.id === selectedAgentId && a.available))
+        ? selectedAgentId
+        : (available[0]?.id ?? 'antigravity');
+
+      const agent = agents.find((a) => a.id === agentId);
+      if (!agent) return;
+
+      setSelectedAgent(agentId);
+      setCreating(true);
+      try {
+        const terminalEnabled = useActiveTerminal && !!activeTerminalId;
+        const browserTabId = activeProject?.activeBrowserTabId ?? null;
+        const browserEnabled = useActiveBrowser && !!browserTabId;
+        const created = await createChatSession(agentId, activeProject?.path, terminalEnabled, terminalEnabled ? activeTerminalId : undefined, browserEnabled, browserTabId);
+        const session: ChatSessionInfo = {
+          id: created.id,
+          recordId: created.resumedFrom ?? created.id,
+          agentId,
+          title: content.slice(0, 32) || agent.label || 'Chat',
+          messages: [],
+          status: 'idle',
+          createdAt: Date.now(),
+          kind: 'live',
+          workDir: created.workDir ?? activeProject?.path,
+          acpSessionId: created.acpSessionId,
+          useActiveTerminal: terminalEnabled,
+          terminalId: terminalEnabled ? activeTerminalId : undefined,
+          useActiveBrowser: browserEnabled,
+          browserSelection: browserEnabled ? browserSelection : null,
+          browserSelectionMode,
+          browserSelectionCapture: browserEnabled ? browserSelectionCapture : null,
+        };
+        createSessionStore(session);
+        setActiveSession(session.id);
+        sendMessage(content, undefined, attachments);
+      } catch (err) {
+        console.error('Failed to auto-create chat session on send:', err);
+      } finally {
+        setCreating(false);
+      }
+      return;
+    }
     sendMessage(content, undefined, attachments);
   };
 
@@ -303,13 +388,36 @@ export function ChatPanel() {
     <div className="chat-panel">
       <div className="chat-header">
         <div className="chat-tab-session-area">
-          <ChatTabs
-            tabs={projectSessions}
-            activeTabId={activeSessionId}
-            agents={agents}
-            onSelectTab={setActiveSession}
-            onCloseTab={handleCloseTab}
-          />
+          {!sidebarVisible && onToggleSidebar && (
+            <button
+              className="topbar-btn sidebar-expand-btn"
+              onClick={onToggleSidebar}
+              type="button"
+              title="Expand sidebar (Ctrl+B)"
+            >
+              <SidebarToggleIcon />
+            </button>
+          )}
+          <div className="center-session-info">
+            <span className="session-project-tag">{activeProject?.name ?? '9ed'}</span>
+            <span className="session-title-divider">/</span>
+            <span className="session-title-text">{activeSession?.title || 'Chat'}</span>
+            {activeSession && (
+              <span className="center-agent-badge" data-agent={activeSession.agentId}>
+                <span className="center-agent-glyph">{agentGlyphs[activeSession.agentId] ?? '◈'}</span>
+                <span>{agents.find((a) => a.id === activeSession.agentId)?.label ?? activeSession.agentId}</span>
+              </span>
+            )}
+          </div>
+          {projectSessions.length > 1 && (
+            <ChatTabs
+              tabs={projectSessions}
+              activeTabId={activeSessionId}
+              agents={agents}
+              onSelectTab={setActiveSession}
+              onCloseTab={handleCloseTab}
+            />
+          )}
         </div>
         <div className="chat-header-actions">
           <ChatSessionList />
@@ -364,6 +472,7 @@ export function ChatPanel() {
               document.body,
             ) : null}
           </div>
+          {auxiliaryToggles}
         </div>
       </div>
 
@@ -383,7 +492,38 @@ export function ChatPanel() {
             </div>
           </div>
         ) : !activeSession ? (
-          <div className="chat-empty">Press + to start a chat</div>
+          <div className="chat-welcome-hero">
+            <div className="chat-welcome-icon-ring">
+              <span className="chat-welcome-glyph">◈</span>
+            </div>
+            <h2 className="chat-welcome-title">Google Antigravity</h2>
+            <p className="chat-welcome-subtitle">
+              {activeProject ? `Ready to pair program in ${activeProject.name}` : 'Ready to pair program with you'}
+            </p>
+            <div className="chat-welcome-chips">
+              <button
+                className="chat-suggestion-chip"
+                type="button"
+                onClick={() => void handleSend("Explain project architecture and key components")}
+              >
+                <span className="chip-icon">🔍</span> Explain project structure
+              </button>
+              <button
+                className="chat-suggestion-chip"
+                type="button"
+                onClick={() => void handleSend("Check git status and summarize recent changes")}
+              >
+                <span className="chip-icon">🌿</span> Check git status
+              </button>
+              <button
+                className="chat-suggestion-chip"
+                type="button"
+                onClick={() => void handleSend("Run test suite and report any failures")}
+              >
+                <span className="chip-icon">🧪</span> Run tests
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="chat-messages">
             {showChatDebugPanel && (

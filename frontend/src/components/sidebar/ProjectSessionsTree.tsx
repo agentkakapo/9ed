@@ -60,6 +60,8 @@ export function ProjectSessionsTree() {
   const projects = useWorkspaceStore((s) => s.projects);
   const activeProjectId = useWorkspaceStore((s) => s.activeProjectId);
   const setActiveProject = useWorkspaceStore((s) => s.setActiveProject);
+  const removeProject = useWorkspaceStore((s) => s.removeProject);
+  const setShowPicker = useWorkspaceStore((s) => s.setShowPicker);
 
   const sessions = useChatStore((s) => s.sessions);
   const activeSessionId = useChatStore((s) => s.activeSessionId);
@@ -181,6 +183,18 @@ export function ProjectSessionsTree() {
 
   return (
     <div className="project-sessions-tree">
+      <div className="project-tree-top-bar">
+        <span className="project-tree-heading">Open Projects</span>
+        <button
+          type="button"
+          className="project-open-folder-btn"
+          onClick={() => setShowPicker(true)}
+          title="Open folder in workspace"
+        >
+          + Open Folder
+        </button>
+      </div>
+
       {projects.map((project) => {
         const isCollapsed = !!collapsedProjects[project.id];
         const isActiveProject = project.id === activeProjectId;
@@ -227,6 +241,17 @@ export function ProjectSessionsTree() {
                   title={`Start new chat in ${project.name}`}
                 >
                   +
+                </button>
+                <button
+                  type="button"
+                  className="project-close-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeProject(project.id);
+                  }}
+                  title={`Close project ${project.name}`}
+                >
+                  ×
                 </button>
               </div>
             </div>

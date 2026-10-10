@@ -224,7 +224,7 @@ const initialWorkspace = readStoredWorkspace();
 export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   projects: initialWorkspace.projects.map(emptyProject),
   activeProjectId: initialWorkspace.activeProjectId,
-  activePanel: 'explorer',
+  activePanel: 'sessions',
   sidebarVisible: true,
   terminalVisible: true,
   chatVisible: true,

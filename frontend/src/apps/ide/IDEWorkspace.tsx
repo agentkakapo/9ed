@@ -9,7 +9,6 @@ import { useWorkspaceStatePersistence, restoreWorkspaceState } from '../../hooks
 import { ActivityBar } from '../../components/sidebar/ActivityBar';
 import { FileTree } from '../../components/sidebar/FileTree';
 import { SearchPanel } from '../../components/sidebar/SearchPanel';
-import { ProjectList } from '../../components/sidebar/ProjectList';
 import { ProjectSessionsTree } from '../../components/sidebar/ProjectSessionsTree';
 import { GitPanel } from '../../components/git/GitPanel';
 import { EditorArea } from '../../components/editor/EditorArea';
@@ -130,8 +129,6 @@ export function IDEWorkspace() {
   const setActivePanel = useWorkspaceStore((s) => s.setActivePanel);
 
   // Chat store selectors
-  const activeSessionId = useChatStore((s) => s.activeSessionId);
-  const sessions = useChatStore((s) => s.sessions);
   const agents = useChatStore((s) => s.agents);
   const selectedAgentId = useChatStore((s) => s.selectedAgentId);
   const setSelectedAgent = useChatStore((s) => s.setSelectedAgent);
@@ -148,11 +145,6 @@ export function IDEWorkspace() {
   const [activeRightPane, setActiveRightPane] = useState<RightPaneType>(null);
 
   const activeProject = useMemo(() => projects.find((p) => p.id === activeProjectId) ?? null, [projects, activeProjectId]);
-  const activeSession = useMemo(() => sessions.find((s) => s.id === activeSessionId) ?? null, [sessions, activeSessionId]);
-  const activeAgent = useMemo(() => {
-    if (!activeSession) return null;
-    return agents.find((a) => a.id === activeSession.agentId) ?? null;
-  }, [activeSession, agents]);
 
   useWorkspaceStatePersistence();
   useGitStatus(activeProject?.path ?? null);
@@ -436,7 +428,7 @@ export function IDEWorkspace() {
           {/* Sidebar Navigation Tabs */}
           <div className="sidebar-nav-tabs">
             <button
-              className={`sidebar-nav-tab${activePanel === 'sessions' ? ' active' : ''}`}
+              className={`sidebar-nav-tab${(activePanel === 'sessions' || activePanel === 'projects') ? ' active' : ''}`}
               onClick={() => setActivePanel('sessions')}
               type="button"
               title="Chat Sessions"
@@ -471,7 +463,7 @@ export function IDEWorkspace() {
 
           {/* Sidebar Body Content */}
           <div className="sidebar-scrollable-body">
-            {activePanel === 'sessions' && <ProjectSessionsTree />}
+            {(activePanel === 'sessions' || activePanel === 'projects') && <ProjectSessionsTree />}
             {activePanel === 'explorer' && activeProject && (
               <FileTree rootPath={activeProject.path} onFileSelect={handleFileSelect} refreshKey={treeRefreshKey} />
             )}
@@ -481,23 +473,14 @@ export function IDEWorkspace() {
             {activePanel === 'git' && activeProject && (
               <GitPanel projectPath={activeProject.path} onOpenDiff={handleOpenDiff} />
             )}
-            {activePanel === 'projects' && <ProjectList />}
             {activePanel === 'settings' && <SettingsPanel />}
           </div>
 
           {/* Sidebar Footer */}
           <div className="sidebar-footer">
             <button
-              className={`sidebar-footer-btn${activePanel === 'projects' ? ' active' : ''}`}
-              onClick={() => setActivePanel('projects')}
-              type="button"
-              title="Projects"
-            >
-              🗂 Projects
-            </button>
-            <button
               className={`sidebar-footer-btn${activePanel === 'settings' ? ' active' : ''}`}
-              onClick={() => setActivePanel('settings')}
+              onClick={() => setActivePanel(activePanel === 'settings' ? 'sessions' : 'settings')}
               type="button"
               title="Settings"
             >
@@ -516,78 +499,51 @@ export function IDEWorkspace() {
 
         {/* Wide Center: Chat Area */}
         <main className="workspace-center ide-chat-center" aria-hidden={layoutMode === 'mobile' && mobileView !== 'chat'}>
-          {/* Center Topbar with Session Info & Auxiliary Pane Toggles */}
-          <div className="workspace-center-topbar">
-            <div className="center-topbar-left">
-              {!sidebarVisible && (
-                <button
-                  className="topbar-btn sidebar-expand-btn"
-                  onClick={toggleSidebar}
-                  type="button"
-                  title="Expand sidebar (Ctrl+B)"
-                >
-                  <SidebarToggleIcon />
-                </button>
-              )}
-              <div className="center-session-info">
-                <span className="session-project-tag">{activeProject?.name ?? '9ed'}</span>
-                <span className="session-title-divider">/</span>
-                <span className="session-title-text">{activeSession?.title ?? 'Chat'}</span>
-                {activeAgent && (
-                  <span className="center-agent-badge" data-agent={activeAgent.id}>
-                    <span className="center-agent-glyph">{agentGlyphs[activeAgent.id] ?? '◈'}</span>
-                    <span>{activeAgent.label}</span>
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="center-topbar-right">
-              {/* Toggles to open each of the other panes in the right drawer */}
-              <div className="pane-toggles-group">
-                <button
-                  className={`pane-toggle-btn${activeRightPane === 'editor' ? ' active' : ''}`}
-                  onClick={() => toggleRightPane('editor')}
-                  type="button"
-                  title="Toggle Code Editor"
-                >
-                  <EditorIcon />
-                  <span>Editor</span>
-                </button>
-                <button
-                  className={`pane-toggle-btn${activeRightPane === 'terminal' ? ' active' : ''}`}
-                  onClick={() => toggleRightPane('terminal')}
-                  type="button"
-                  title="Toggle Terminal (Ctrl+`)"
-                >
-                  <TerminalIcon />
-                  <span>Terminal</span>
-                </button>
-                <button
-                  className={`pane-toggle-btn${activeRightPane === 'browser' ? ' active' : ''}`}
-                  onClick={() => toggleRightPane('browser')}
-                  type="button"
-                  title="Toggle Browser (Ctrl+Shift+B)"
-                >
-                  <BrowserIcon />
-                  <span>Browser</span>
-                </button>
-                <button
-                  className={`pane-toggle-btn${activeRightPane === 'git' ? ' active' : ''}`}
-                  onClick={() => toggleRightPane('git')}
-                  type="button"
-                  title="Toggle Git Changes (Ctrl+Shift+G)"
-                >
-                  <GitIcon />
-                  <span>Git</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Full-width Chat Panel */}
           <div className="workspace-chat-container">
-            <ChatPanel />
+            <ChatPanel
+              auxiliaryToggles={
+                <div className="pane-toggles-group">
+                  <button
+                    className={`pane-toggle-btn${activeRightPane === 'editor' ? ' active' : ''}`}
+                    onClick={() => toggleRightPane('editor')}
+                    type="button"
+                    title="Toggle Code Editor"
+                  >
+                    <EditorIcon />
+                    <span>Editor</span>
+                  </button>
+                  <button
+                    className={`pane-toggle-btn${activeRightPane === 'terminal' ? ' active' : ''}`}
+                    onClick={() => toggleRightPane('terminal')}
+                    type="button"
+                    title="Toggle Terminal (Ctrl+`)"
+                  >
+                    <TerminalIcon />
+                    <span>Terminal</span>
+                  </button>
+                  <button
+                    className={`pane-toggle-btn${activeRightPane === 'browser' ? ' active' : ''}`}
+                    onClick={() => toggleRightPane('browser')}
+                    type="button"
+                    title="Toggle Browser (Ctrl+Shift+B)"
+                  >
+                    <BrowserIcon />
+                    <span>Browser</span>
+                  </button>
+                  <button
+                    className={`pane-toggle-btn${activeRightPane === 'git' ? ' active' : ''}`}
+                    onClick={() => toggleRightPane('git')}
+                    type="button"
+                    title="Toggle Git Changes (Ctrl+Shift+G)"
+                  >
+                    <GitIcon />
+                    <span>Git</span>
+                  </button>
+                </div>
+              }
+              onToggleSidebar={toggleSidebar}
+              sidebarVisible={sidebarVisible}
+            />
           </div>
         </main>
 
