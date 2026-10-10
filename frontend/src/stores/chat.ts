@@ -877,6 +877,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const browserState = activeBrowserStateForWorkDir(get(), historyEntry?.workDir);
       const terminalState = terminalIntentAndEffective(get());
 
+      let sessionState: Awaited<ReturnType<typeof getChatSessionState>> | null = null;
+
       if (historyEntry?.workDir && historyEntry.agentId) {
         const connectingSession = withNoTabBrowserWarning({
           id: sessionId,
@@ -899,17 +901,36 @@ export const useChatStore = create<ChatState>((set, get) => ({
         set((state) => ({
           sessions: [...state.sessions.filter((s) => s.id !== sessionId && s.recordId !== sessionId), connectingSession],
         }));
+
+        // Fetch persisted transcript and resume agent subprocess in parallel!
+        const statePromise = getChatSessionState(sessionId).catch(() => null);
+        const resumePromise = resumeChatSession(
+          sessionId,
+          historyEntry.agentId,
+          historyEntry.workDir,
+          historyEntry.acpSessionId,
+          terminalState.effective,
+          terminalState.effective ? terminalState.terminalId : undefined,
+          browserState.enabled,
+          browserState.tabId,
+        );
+
+        sessionState = await statePromise;
+        const quickReplayed = replaySessionState(sessionState?.messages ?? [], sessionState?.events ?? []);
+        const quickSnapshotCommands = parseSnapshotJson<SlashCommandInfo>(sessionState?.snapshot?.commandsJson);
+        const quickSnapshotConfig = parseSnapshotJson<ConfigOptionInfo>(sessionState?.snapshot?.configOptsJson);
+        set((state) => ({
+          sessions: updateSession(state.sessions, sessionId, (s) => ({
+            ...s,
+            title: quickReplayed.title ?? s.title,
+            messages: quickReplayed.messages,
+            commands: quickReplayed.commands ?? quickSnapshotCommands ?? s.commands,
+            configOptions: quickReplayed.configOptions ?? quickSnapshotConfig ?? s.configOptions,
+          })),
+        }));
+
         try {
-          const resumed = await resumeChatSession(
-            sessionId,
-            historyEntry.agentId,
-            historyEntry.workDir,
-            historyEntry.acpSessionId,
-            terminalState.effective,
-            terminalState.effective ? terminalState.terminalId : undefined,
-            browserState.enabled,
-            browserState.tabId,
-          );
+          const resumed = await resumePromise;
           if ('id' in resumed) {
             liveSessionId = resumed.id;
             kind = 'resumable';
@@ -920,12 +941,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
         } catch {
           kind = 'archived';
         }
+      } else {
+        sessionState = await getChatSessionState(sessionId).catch(() => null);
       }
 
-      const sessionState = await getChatSessionState(sessionId);
-      const replayed = replaySessionState(sessionState.messages ?? [], sessionState.events ?? []);
-      const snapshotCommands = parseSnapshotJson<SlashCommandInfo>(sessionState.snapshot?.commandsJson);
-      const snapshotConfig = parseSnapshotJson<ConfigOptionInfo>(sessionState.snapshot?.configOptsJson);
+      const replayed = replaySessionState(sessionState?.messages ?? [], sessionState?.events ?? []);
+      const snapshotCommands = parseSnapshotJson<SlashCommandInfo>(sessionState?.snapshot?.commandsJson);
+      const snapshotConfig = parseSnapshotJson<ConfigOptionInfo>(sessionState?.snapshot?.configOptsJson);
+
       // Recompute in case user toggled mid-flight; still write INTENT to session.
       const browserStateFinal = activeBrowserStateForWorkDir(get(), historyEntry?.workDir);
       const terminalStateFinal = terminalIntentAndEffective(get());
@@ -1194,6 +1217,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
       let acpSessionId: string | undefined = restore.acpSessionId;
       const restoreAgentId = restore.agentId;
 
+      const sessionState = await getChatSessionState(targetSessionId).catch(() => null);
+      const historyEntry = get().historySessions.find((h) => h.id === targetSessionId);
+      const replayed = sessionState ? replaySessionState(sessionState.messages ?? [], sessionState.events ?? []) : { messages: [] as ChatMessage[] };
+      const snapshotCommands = sessionState ? parseSnapshotJson<SlashCommandInfo>(sessionState.snapshot?.commandsJson) : undefined;
+      const snapshotConfig = sessionState ? parseSnapshotJson<ConfigOptionInfo>(sessionState.snapshot?.configOptsJson) : undefined;
+
       if (restore.isLive) {
         liveSessionId = restore.liveSessionId ?? targetSessionId;
         kind = 'live';
@@ -1205,8 +1234,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
           id: targetSessionId,
           recordId: targetSessionId,
           agentId: restoreAgentId,
-          title: fallbackTitle(restoreAgentId, restore.title),
-          messages: [],
+          title: replayed.title ?? fallbackTitle(restoreAgentId, restore.title),
+          messages: replayed.messages,
           status: 'connecting',
           createdAt: Date.now(),
           kind: 'archived',
@@ -1218,6 +1247,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
           browserSelection: browserState.selection,
           browserSelectionMode: browserState.selectionMode,
           browserSelectionCapture: browserState.selectionCapture,
+          commands: replayed.commands ?? snapshotCommands,
+          configOptions: replayed.configOptions ?? snapshotConfig,
+          contextWindow: replayed.contextWindow,
+          contextUsed: replayed.contextUsed,
+          costAmount: replayed.costAmount,
+          costCurrency: replayed.costCurrency,
         }, browserState.intent, browserState.tabId);
         set((state) => ({
           sessions: [...state.sessions.filter((s) => s.id !== targetSessionId && s.recordId !== targetSessionId), connectingSession],
@@ -1244,13 +1279,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
           kind = 'archived';
         }
       }
-
-      const sessionState = await getChatSessionState(targetSessionId).catch(() => null);
-      const historyEntry = get().historySessions.find((h) => h.id === targetSessionId);
-
-      const replayed = sessionState ? replaySessionState(sessionState.messages ?? [], sessionState.events ?? []) : { messages: [] as ChatMessage[] };
-      const snapshotCommands = sessionState ? parseSnapshotJson<SlashCommandInfo>(sessionState.snapshot?.commandsJson) : undefined;
-      const snapshotConfig = sessionState ? parseSnapshotJson<ConfigOptionInfo>(sessionState.snapshot?.configOptsJson) : undefined;
 
       const restoreWorkDir = restore.workDir ?? historyEntry?.workDir ?? projectPath;
       const browserStateFinal = activeBrowserStateForWorkDir(get(), restoreWorkDir);

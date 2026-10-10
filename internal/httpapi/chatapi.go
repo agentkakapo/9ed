@@ -1155,9 +1155,13 @@ func (a *API) handleChatSessions(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if a.chatStore != nil {
-			if resumedFrom != "" && session.ID() != req.ResumeID {
-				_ = a.chatStore.UpdateSessionACP(req.ResumeID, session.ACPSessionID(), workDir)
-				a.chatSessionManager.LinkRecordID(session.ID(), req.ResumeID)
+			targetRecordID := req.ResumeID
+			if targetRecordID == "" {
+				targetRecordID = session.ID()
+			}
+			if targetRecordID != session.ID() {
+				_ = a.chatStore.UpdateSessionACP(targetRecordID, session.ACPSessionID(), workDir)
+				a.chatSessionManager.LinkRecordID(session.ID(), targetRecordID)
 			} else {
 				record, _ := a.chatStore.GetSession(session.ID())
 				if record == nil {
@@ -2100,18 +2104,6 @@ func (a *API) handleChatResume(w http.ResponseWriter, r *http.Request) {
 		a.chatSessionManager.Remove(previousLiveID)
 	}
 
-	// Invalidate any stale chatStream bound to the old session. When the ACP
-	// agent returns the same session ID after resume, the old stream's run()
-	// goroutine is still listening on the OLD session's Events()/Done()
-	// channels. Without replacement, new events from the resumed session would
-	// never reach subscribers, causing "connecting forever".
-	if a.chatStreams != nil {
-		if previousLiveID != "" && previousLiveID != session.ID() {
-			a.chatStreams.Invalidate(previousLiveID)
-		}
-		a.chatStreams.ReplaceSession(session.ID(), session, a.newChatEventPersister(session.ID()))
-	}
-
 	if a.chatStore != nil {
 		if session.ID() != req.SessionID {
 			_ = a.chatStore.UpdateSessionACP(req.SessionID, session.ACPSessionID(), workDir)
@@ -2131,6 +2123,18 @@ func (a *API) handleChatResume(w http.ResponseWriter, r *http.Request) {
 			}
 			a.chatSessionManager.LinkRecordID(session.ID(), session.ID())
 		}
+	}
+
+	// Invalidate any stale chatStream bound to the old session. When the ACP
+	// agent returns the same session ID after resume, the old stream's run()
+	// goroutine is still listening on the OLD session's Events()/Done()
+	// channels. Without replacement, new events from the resumed session would
+	// never reach subscribers, causing "connecting forever".
+	if a.chatStreams != nil {
+		if previousLiveID != "" && previousLiveID != session.ID() {
+			a.chatStreams.Invalidate(previousLiveID)
+		}
+		a.chatStreams.ReplaceSession(session.ID(), session, a.newChatEventPersister(session.ID()))
 	}
 
 	writeJSON(w, http.StatusCreated, chatCreateResponse{

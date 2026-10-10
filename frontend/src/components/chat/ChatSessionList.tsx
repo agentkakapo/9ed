@@ -131,7 +131,7 @@ export function ChatSessionList() {
   }, [open]);
 
   const projectSessions = sessions.filter((session) => sessionBelongsToWorkDir(session, activeProject?.path));
-  const activeSessionIds = new Set(projectSessions.map((s) => s.id));
+  const activeSessionIds = new Set(projectSessions.flatMap((s) => [s.id, s.recordId].filter((id): id is string => Boolean(id))));
   const activeAcpSessionIds = new Set(projectSessions.map((s) => s.acpSessionId).filter(Boolean));
   const pastSessions = historySessions.filter((h) => !activeSessionIds.has(h.id) && (!h.acpSessionId || !activeAcpSessionIds.has(h.acpSessionId)));
 

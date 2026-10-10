@@ -141,7 +141,9 @@ func openChatStore(dbPath string) (*ChatStore, error) {
 		return nil, err
 	}
 
-	return &ChatStore{db: db}, nil
+	store := &ChatStore{db: db}
+	_ = store.DeleteEmptySessions()
+	return store, nil
 }
 
 func createTables(db *sql.DB) error {
@@ -303,7 +305,12 @@ func (s *ChatStore) ListSessions(limit int) ([]SessionRecord, error) {
 		limit = 50
 	}
 	rows, err := s.db.Query(
-		"SELECT id, agent_id, title, work_dir, acp_session_id, status, created_at, updated_at FROM chat_sessions ORDER BY updated_at DESC LIMIT ?",
+		`SELECT cs.id, cs.agent_id, cs.title, cs.work_dir, cs.acp_session_id, cs.status, cs.created_at, cs.updated_at 
+		 FROM chat_sessions cs
+		 WHERE cs.title != '' 
+		    OR EXISTS (SELECT 1 FROM chat_messages cm WHERE cm.session_id = cs.id)
+		    OR EXISTS (SELECT 1 FROM chat_events ce WHERE ce.session_id = cs.id AND ce.kind NOT IN ('config_options', 'commands', 'done'))
+		 ORDER BY cs.updated_at DESC LIMIT ?`,
 		limit,
 	)
 	if err != nil {
@@ -699,8 +706,30 @@ func (s *ChatStore) GetEventWindow(sessionID string) (minSeq, maxSeq, nextSeq in
 	return minSeq, maxSeq, nextSeq, nil
 }
 
+func (s *ChatStore) GetSessionByACP(acpSessionID string) (*SessionRecord, error) {
+	if acpSessionID == "" {
+		return nil, nil
+	}
+	row := s.db.QueryRow(
+		"SELECT id, agent_id, title, work_dir, acp_session_id, status, created_at, updated_at FROM chat_sessions WHERE acp_session_id = ? ORDER BY updated_at DESC LIMIT 1",
+		acpSessionID,
+	)
+	var r SessionRecord
+	if err := row.Scan(&r.ID, &r.AgentID, &r.Title, &r.WorkDir, &r.ACPSessionID, &r.Status, &r.CreatedAt, &r.UpdatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &r, nil
+}
+
 func (s *ChatStore) ResolveRecordID(liveSessionID string) string {
 	record, err := s.GetSession(liveSessionID)
+	if err == nil && record != nil {
+		return record.ID
+	}
+	record, err = s.GetSessionByACP(liveSessionID)
 	if err == nil && record != nil {
 		return record.ID
 	}
@@ -712,7 +741,13 @@ func (s *ChatStore) SessionsForProject(workDir string, limit int) ([]SessionReco
 		limit = 20
 	}
 	rows, err := s.db.Query(
-		"SELECT id, agent_id, title, work_dir, acp_session_id, status, created_at, updated_at FROM chat_sessions WHERE work_dir = ? ORDER BY updated_at DESC LIMIT ?",
+		`SELECT cs.id, cs.agent_id, cs.title, cs.work_dir, cs.acp_session_id, cs.status, cs.created_at, cs.updated_at 
+		 FROM chat_sessions cs 
+		 WHERE cs.work_dir = ? 
+		   AND (cs.title != '' 
+		        OR EXISTS (SELECT 1 FROM chat_messages cm WHERE cm.session_id = cs.id)
+		        OR EXISTS (SELECT 1 FROM chat_events ce WHERE ce.session_id = cs.id AND ce.kind NOT IN ('config_options', 'commands', 'done')))
+		 ORDER BY cs.updated_at DESC LIMIT ?`,
 		workDir, limit,
 	)
 	if err != nil {
@@ -729,6 +764,16 @@ func (s *ChatStore) SessionsForProject(workDir string, limit int) ([]SessionReco
 		sessions = append(sessions, r)
 	}
 	return sessions, rows.Err()
+}
+
+func (s *ChatStore) DeleteEmptySessions() error {
+	_, err := s.db.Exec(`
+		DELETE FROM chat_sessions 
+		WHERE title = '' 
+		  AND NOT EXISTS (SELECT 1 FROM chat_messages cm WHERE cm.session_id = chat_sessions.id)
+		  AND NOT EXISTS (SELECT 1 FROM chat_events ce WHERE ce.session_id = chat_sessions.id AND ce.kind NOT IN ('config_options', 'commands', 'done'))
+	`)
+	return err
 }
 
 func migrateSchema(db *sql.DB) error {

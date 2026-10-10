@@ -141,7 +141,7 @@ export function ProjectSessionsTree() {
         const isCollapsed = !!collapsedProjects[project.id];
         const isActiveProject = project.id === activeProjectId;
         const liveSessions = sessions.filter((s) => sessionBelongsToWorkDir(s, project.path));
-        const activeIds = new Set(liveSessions.map((s) => s.id));
+        const activeIds = new Set(liveSessions.flatMap((s) => [s.id, s.recordId].filter((id): id is string => Boolean(id))));
         const activeAcpIds = new Set(liveSessions.map((s) => s.acpSessionId).filter(Boolean));
         const histSessions = historySessions.filter((h) =>
           sessionBelongsToWorkDir(h, project.path) &&
