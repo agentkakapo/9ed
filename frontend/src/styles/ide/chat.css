@@ -184,23 +184,38 @@
 
 .picker-dropdown {
   position: fixed;
-  z-index: 1000;
+  z-index: 10000;
   background: #111422;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
-  padding: 4px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 2px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.picker-dropdown::-webkit-scrollbar {
+  width: 5px;
+}
+
+.picker-dropdown::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
 }
 
 .picker-dropdown-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   padding: 8px 12px;
   border: none;
   border-radius: 6px;
@@ -211,6 +226,9 @@
   font-weight: 500;
   text-align: left;
   transition: background 0.12s ease;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .picker-dropdown-item:hover:not(:disabled) {
@@ -227,6 +245,137 @@
 .picker-dropdown-item:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.new-chat-dropdown-header {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8b8b96;
+  padding: 6px 10px 4px;
+  user-select: none;
+}
+
+.new-chat-repo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+}
+
+.new-chat-repo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #e2e8f0;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease;
+  box-sizing: border-box;
+}
+
+.new-chat-repo-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.new-chat-repo-item[data-active="true"] {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+}
+
+.new-chat-repo-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.new-chat-repo-left svg {
+  flex-shrink: 0;
+  color: #818cf8;
+}
+
+.new-chat-repo-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.new-chat-repo-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.new-chat-repo-path {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.new-chat-repo-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #818cf8;
+  flex-shrink: 0;
+}
+
+.new-chat-dropdown-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 0;
+  flex-shrink: 0;
+}
+
+.new-chat-repo-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #a5b4fc;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-align: left;
+  transition: background 0.12s ease;
+  box-sizing: border-box;
+}
+
+.new-chat-repo-action-btn:hover {
+  background: rgba(99, 102, 241, 0.15);
+  color: #c7d2fe;
+}
+
+.new-chat-dropdown-empty {
+  font-size: 0.75rem;
+  color: #64748b;
+  padding: 10px 12px;
+  text-align: center;
+  font-style: italic;
 }
 
 /* ── Redesigned Model Dropdown (Anthropic/Claude & Antigravity Style) ── */

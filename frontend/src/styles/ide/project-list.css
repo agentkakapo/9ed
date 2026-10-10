@@ -106,59 +106,80 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 50% 10%, rgba(99, 102, 241, 0.12), transparent 55%),
-              radial-gradient(circle at 80% 80%, rgba(56, 189, 248, 0.06), transparent 50%),
-              #08090d;
-  padding: 24px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 16px;
   overflow-y: auto;
   overscroll-behavior: contain;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
 }
 
 .picker-card {
   width: 100%;
-  max-width: 680px;
-  background: rgba(15, 18, 29, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  padding: 36px;
+  max-width: 480px;
+  background: #141620;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 20px 22px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  gap: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  max-height: min(580px, calc(100vh - 40px));
+  overflow-y: auto;
+  box-sizing: border-box;
+  scrollbar-width: thin;
 }
 
-.picker-hero {
+.picker-header {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
   padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.picker-logo {
-  width: min(380px, 100%);
-  height: auto;
-  display: block;
-  filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.45));
+.picker-header-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.picker-subtitle {
+.picker-modal-title {
   margin: 0;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--accent-cyan);
-  letter-spacing: 0.05em;
-  opacity: 0.85;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.picker-modal-desc {
+  font-size: 0.76rem;
+  color: #94a3b8;
+}
+
+.picker-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.12s ease;
+}
+
+.picker-close-btn:hover {
+  color: #ffffff;
 }
 
 .picker-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .picker-section-title {
@@ -304,8 +325,9 @@
 }
 
 .picker-tree {
-  max-height: 340px;
+  max-height: 200px;
   overflow-y: auto;
+  scrollbar-width: thin;
   border: 1px solid var(--border-color);
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.2);

@@ -64,12 +64,30 @@ function BranchIcon() {
   );
 }
 
+function CheckIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
 type MenuType = 'location' | 'project' | 'branch' | 'plus' | null;
 
 export function NewChatBar() {
   const projects = useWorkspaceStore((s) => s.projects);
   const activeProjectId = useWorkspaceStore((s) => s.activeProjectId);
   const setActiveProject = useWorkspaceStore((s) => s.setActiveProject);
+  const setShowPicker = useWorkspaceStore((s) => s.setShowPicker);
   const activeProject = useMemo(
     () => projects.find((p) => p.id === activeProjectId) ?? projects[0] ?? null,
     [projects, activeProjectId],
@@ -104,46 +122,61 @@ export function NewChatBar() {
   useLayoutEffect(() => {
     if (!openMenu) return;
 
-    let trigger: HTMLButtonElement | null = null;
-    if (openMenu === 'location') trigger = locationBtnRef.current;
-    else if (openMenu === 'project') trigger = projectBtnRef.current;
-    else if (openMenu === 'branch') trigger = branchBtnRef.current;
-    else if (openMenu === 'plus') trigger = plusBtnRef.current;
+    const updatePosition = () => {
+      let trigger: HTMLButtonElement | null = null;
+      if (openMenu === 'location') trigger = locationBtnRef.current;
+      else if (openMenu === 'project') trigger = projectBtnRef.current;
+      else if (openMenu === 'branch') trigger = branchBtnRef.current;
+      else if (openMenu === 'plus') trigger = plusBtnRef.current;
 
-    if (!trigger) return;
+      if (!trigger) return;
 
-    const rect = trigger.getBoundingClientRect();
-    const width = openMenu === 'project' || openMenu === 'branch' ? 240 : 200;
-    let left = rect.left;
-    if (left + width > window.innerWidth - 12) {
-      left = window.innerWidth - width - 12;
-    }
-    if (left < 12) left = 12;
+      const rect = trigger.getBoundingClientRect();
+      const width = openMenu === 'project' ? 320 : openMenu === 'branch' ? 240 : 200;
+      let left = rect.left;
+      if (left + width > window.innerWidth - 12) {
+        left = window.innerWidth - width - 12;
+      }
+      if (left < 12) left = 12;
 
-    const gap = 6;
-    // Prefer opening upward if space allows
-    const popoverHeight = 180;
-    const shouldOpenUp = rect.top > popoverHeight + gap + 20;
+      const gap = 6;
+      const spaceAbove = Math.max(60, rect.top - 20);
+      const spaceBelow = Math.max(60, window.innerHeight - rect.bottom - 20);
+      const openUp = spaceAbove >= 180 || spaceAbove > spaceBelow;
+      const maxHeight = Math.min(360, Math.max(120, openUp ? spaceAbove : spaceBelow));
 
-    if (shouldOpenUp) {
-      setOverlayStyle({
-        position: 'fixed',
-        left: `${Math.round(left)}px`,
-        bottom: `${Math.round(window.innerHeight - rect.top + gap)}px`,
-        width: `${width}px`,
-        maxHeight: '260px',
-        zIndex: 9999,
-      });
-    } else {
-      setOverlayStyle({
-        position: 'fixed',
-        left: `${Math.round(left)}px`,
-        top: `${Math.round(rect.bottom + gap)}px`,
-        width: `${width}px`,
-        maxHeight: '260px',
-        zIndex: 9999,
-      });
-    }
+      if (openUp) {
+        setOverlayStyle({
+          position: 'fixed',
+          left: `${Math.round(left)}px`,
+          bottom: `${Math.round(window.innerHeight - rect.top + gap)}px`,
+          width: `${width}px`,
+          maxHeight: `${Math.round(maxHeight)}px`,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          zIndex: 10000,
+        });
+      } else {
+        setOverlayStyle({
+          position: 'fixed',
+          left: `${Math.round(left)}px`,
+          top: `${Math.round(rect.bottom + gap)}px`,
+          width: `${width}px`,
+          maxHeight: `${Math.round(maxHeight)}px`,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          zIndex: 10000,
+        });
+      }
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
   }, [openMenu]);
 
   // Click outside listener
@@ -226,48 +259,85 @@ export function NewChatBar() {
     } else if (openMenu === 'project') {
       content = (
         <div className="picker-dropdown picker-dropdown-overlay" ref={dropdownRef} style={overlayStyle}>
-          {projects.map((proj) => (
-            <button
-              key={proj.id}
-              type="button"
-              className="picker-dropdown-item"
-              data-active={proj.id === activeProject?.id ? 'true' : 'false'}
-              onClick={() => {
-                setActiveProject(proj.id);
-                setOpenMenu(null);
-              }}
-            >
-              <CodeIcon />
-              <span>{proj.name}</span>
-            </button>
-          ))}
+          <div className="new-chat-dropdown-header">Repositories &amp; Projects</div>
+          {projects.length > 0 ? (
+            <div className="new-chat-repo-list">
+              {projects.map((proj) => {
+                const isActive = proj.id === activeProject?.id;
+                return (
+                  <button
+                    key={proj.id}
+                    type="button"
+                    className="new-chat-repo-item"
+                    data-active={isActive ? 'true' : 'false'}
+                    onClick={() => {
+                      setActiveProject(proj.id);
+                      setOpenMenu(null);
+                    }}
+                  >
+                    <div className="new-chat-repo-left">
+                      <CodeIcon />
+                      <div className="new-chat-repo-details">
+                        <span className="new-chat-repo-name">{proj.name}</span>
+                        <span className="new-chat-repo-path" title={proj.path}>{proj.path}</span>
+                      </div>
+                    </div>
+                    {isActive && (
+                      <span className="new-chat-repo-check" aria-hidden="true">
+                        <CheckIcon />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="new-chat-dropdown-empty">No repositories open</div>
+          )}
+          <div className="new-chat-dropdown-divider" />
+          <button
+            type="button"
+            className="new-chat-repo-action-btn"
+            onClick={() => {
+              setOpenMenu(null);
+              setShowPicker(true);
+            }}
+          >
+            <PlusIcon />
+            <span>New repo...</span>
+          </button>
         </div>
       );
     } else if (openMenu === 'branch') {
       content = (
         <div className="picker-dropdown picker-dropdown-overlay" ref={dropdownRef} style={overlayStyle}>
+          <div className="new-chat-dropdown-header">Git Branches</div>
           {branches.length > 0 ? (
-            branches.map((b) => (
-              <button
-                key={b.name}
-                type="button"
-                className="picker-dropdown-item"
-                data-active={b.name === currentBranch ? 'true' : 'false'}
-                onClick={() => void handleSwitchBranch(b.name)}
-              >
-                <BranchIcon />
-                <span>{b.name}</span>
-              </button>
-            ))
+            <div className="new-chat-repo-list">
+              {branches.map((b) => (
+                <button
+                  key={b.name}
+                  type="button"
+                  className="picker-dropdown-item"
+                  data-active={b.name === currentBranch ? 'true' : 'false'}
+                  onClick={() => void handleSwitchBranch(b.name)}
+                >
+                  <BranchIcon />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.name}</span>
+                </button>
+              ))}
+            </div>
           ) : (
             <div className="picker-dropdown-empty">No git branches found</div>
           )}
+          <div className="new-chat-dropdown-divider" />
           <button
             type="button"
-            className="picker-dropdown-item picker-dropdown-action"
+            className="new-chat-repo-action-btn"
             onClick={() => void handleCreateBranch()}
           >
-            <span>+ Create new branch...</span>
+            <PlusIcon />
+            <span>Create new branch...</span>
           </button>
         </div>
       );
@@ -277,10 +347,21 @@ export function NewChatBar() {
           <button
             type="button"
             className="picker-dropdown-item"
+            onClick={() => {
+              setOpenMenu(null);
+              setShowPicker(true);
+            }}
+          >
+            <PlusIcon />
+            <span>New repo...</span>
+          </button>
+          <button
+            type="button"
+            className="picker-dropdown-item"
             onClick={() => void handleCreateBranch()}
           >
             <BranchIcon />
-            <span>New branch</span>
+            <span>New branch...</span>
           </button>
           <button
             type="button"

@@ -34,15 +34,37 @@ export function AgentPicker() {
       const rect = triggerRef.current.getBoundingClientRect();
       const width = Math.min(260, Math.max(220, Math.floor(window.innerWidth * 0.28)));
       const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
-      const top = Math.min(rect.bottom + 6, window.innerHeight - 24);
-      const maxHeight = Math.max(160, Math.min(280, window.innerHeight - top - 12));
-      setOverlayStyle({
-        position: 'fixed',
-        top: `${top}px`,
-        left: `${left}px`,
-        width: `${width}px`,
-        maxHeight: `${maxHeight}px`,
-      });
+      const gap = 6;
+      const aboveSpace = Math.max(0, rect.top - 12 - gap);
+      const belowSpace = Math.max(0, window.innerHeight - rect.bottom - 12 - gap);
+      const opensUpward = aboveSpace >= 140 || aboveSpace > belowSpace;
+      const heightCap = 280;
+
+      if (opensUpward) {
+        const bottom = window.innerHeight - rect.top + gap;
+        const maxHeight = Math.max(100, Math.min(heightCap, aboveSpace));
+        setOverlayStyle({
+          position: 'fixed',
+          bottom: `${bottom}px`,
+          left: `${left}px`,
+          width: `${width}px`,
+          maxHeight: `${maxHeight}px`,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        });
+      } else {
+        const top = rect.bottom + gap;
+        const maxHeight = Math.max(100, Math.min(heightCap, belowSpace));
+        setOverlayStyle({
+          position: 'fixed',
+          top: `${top}px`,
+          left: `${left}px`,
+          width: `${width}px`,
+          maxHeight: `${maxHeight}px`,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        });
+      }
     };
 
     updatePosition();

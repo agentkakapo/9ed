@@ -115,16 +115,28 @@ export function ProjectPicker() {
   }, [setActiveProject, setShowPicker]);
 
   return (
-    <main className="picker-shell">
-      <div className="picker-card">
-        <header className="picker-hero">
-          <img className="picker-logo" src="/logo.svg" alt="9ed" />
-          <p className="picker-subtitle">High-Performance Agentic Cloud IDE</p>
+    <main className="picker-shell" onClick={() => projects.length > 0 && setShowPicker(false)}>
+      <div className="picker-card" onClick={(e) => e.stopPropagation()}>
+        <header className="picker-header">
+          <div className="picker-header-title-wrap">
+            <h2 className="picker-modal-title">Open Project / Repo</h2>
+            <span className="picker-modal-desc">Select a folder to add to workspace</span>
+          </div>
+          {projects.length > 0 && (
+            <button
+              type="button"
+              className="picker-close-btn"
+              onClick={() => setShowPicker(false)}
+              title="Close"
+              aria-label="Close"
+            >
+              ×
+            </button>
+          )}
         </header>
 
         {recentProjects.length > 0 && (
           <div className="picker-section">
-            <h1 className="picker-section-title">Open Project</h1>
             <h2 className="picker-section-title">Recent Projects</h2>
             <div className="picker-projects">
               {recentProjects.map((rp) => (
@@ -164,8 +176,7 @@ export function ProjectPicker() {
 
         {projects.length > 0 && (
           <div className="picker-section">
-            {recentProjects.length === 0 && <h1 className="picker-section-title">Open Project</h1>}
-            <h2 className="picker-section-title">Opened Projects</h2>
+            <h2 className="picker-section-title">Open Repositories</h2>
             <div className="picker-projects">
               {projects.map((p) => (
                 <button
@@ -188,8 +199,7 @@ export function ProjectPicker() {
           </div>
         )}
 
-        {recentProjects.length === 0 && projects.length === 0 && <h1 className="picker-section-title">Open Project</h1>}
-        <h3 className="picker-section-title">Open New Folder</h3>
+        <h3 className="picker-section-title">Browse Directories</h3>
 
         {drives.length > 1 && (
           <div className="drive-picker">
