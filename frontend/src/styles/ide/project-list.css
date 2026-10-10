@@ -326,9 +326,15 @@
   transition: all 0.12s ease;
 }
 
-.folder-picker-up-btn:hover {
+.folder-picker-up-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
+}
+
+.folder-picker-up-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .folder-picker-path-input {

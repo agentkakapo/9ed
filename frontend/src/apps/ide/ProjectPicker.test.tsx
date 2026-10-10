@@ -76,4 +76,31 @@ describe('ProjectPicker', () => {
     expect(container.textContent).toContain('src');
     expect(container.textContent).not.toContain('Loading directories');
   });
+
+  it('disables Up button and prevents navigating above workspace root', async () => {
+    getConfig.mockResolvedValue({ workspaceRoot: '/home/richie' });
+    getDrives.mockResolvedValue([]);
+    getFileTree.mockResolvedValue([
+      { name: '9ed', type: 'dir', size: 0, modified: 1 },
+    ]);
+
+    await act(async () => {
+      root.render(<ProjectPicker />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const upButton = container.querySelector('.folder-picker-up-btn') as HTMLButtonElement | null;
+    expect(upButton).not.toBeNull();
+    expect(upButton?.disabled).toBe(true);
+
+    // Clicking it should not call getFileTree with parent path
+    await act(async () => {
+      upButton?.click();
+      await Promise.resolve();
+    });
+
+    expect(getFileTree).toHaveBeenCalledTimes(1);
+    expect(getFileTree).toHaveBeenCalledWith('/home/richie');
+  });
 });

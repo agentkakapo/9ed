@@ -40,6 +40,12 @@ function getParentPath(dirPath: string): string {
   return trimmed.slice(0, lastIndex) || sep;
 }
 
+function normalizePath(p: string): string {
+  if (!p) return '';
+  const normalized = p.replace(/\\/g, '/').replace(/\/+$/, '');
+  return /^[a-z]:/i.test(normalized) ? normalized.toLowerCase() : normalized;
+}
+
 export function ProjectPicker() {
   const addProject = useWorkspaceStore((s) => s.addProject);
   const projects = useWorkspaceStore((s) => s.projects);
@@ -47,6 +53,7 @@ export function ProjectPicker() {
 
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const [drives, setDrives] = useState<string[]>([]);
+  const [workspaceRoot, setWorkspaceRoot] = useState('');
   const [rootPath, setRootPath] = useState('');
   const [pathInput, setPathInput] = useState('');
   const [entries, setEntries] = useState<DirEntry[]>([]);
@@ -54,6 +61,13 @@ export function ProjectPicker() {
   const [error, setError] = useState<string | null>(null);
 
   const canClose = projects.length > 0;
+
+  const normalizedRoot = normalizePath(workspaceRoot);
+  const normalizedCurrent = normalizePath(rootPath);
+  const isAtRoot = Boolean(
+    !rootPath ||
+    (normalizedRoot && (normalizedCurrent === normalizedRoot || normalizedCurrent.length <= normalizedRoot.length))
+  );
 
   useEffect(() => {
     document.title = '9ed - Open Folder';
@@ -97,6 +111,7 @@ export function ProjectPicker() {
         const config = await getConfig();
         if (cancelled) return;
         const root = config.workspaceRoot || '/';
+        setWorkspaceRoot(root);
         await loadTree(root);
       } catch (err) {
         if (!cancelled) {
@@ -127,8 +142,12 @@ export function ProjectPicker() {
   };
 
   const handleGoUp = () => {
-    if (!rootPath) return;
+    if (!rootPath || isAtRoot) return;
     const parent = getParentPath(rootPath);
+    if (normalizedRoot && normalizePath(parent).length < normalizedRoot.length) {
+      void loadTree(workspaceRoot);
+      return;
+    }
     if (parent !== rootPath) {
       void loadTree(parent);
     }
@@ -136,9 +155,13 @@ export function ProjectPicker() {
 
   const handlePathSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pathInput.trim()) {
-      void loadTree(pathInput.trim());
+    const target = pathInput.trim();
+    if (!target) return;
+    if (normalizedRoot && !normalizePath(target).startsWith(normalizedRoot)) {
+      setError(`Cannot navigate above workspace root: ${workspaceRoot}`);
+      return;
     }
+    void loadTree(target);
   };
 
   const currentFolderName = rootPath.split(/[/\\]/).filter(Boolean).pop() || rootPath || 'Folder';
@@ -236,7 +259,8 @@ export function ProjectPicker() {
             type="button"
             className="folder-picker-up-btn"
             onClick={handleGoUp}
-            title="Go up to parent directory"
+            disabled={isAtRoot}
+            title={isAtRoot ? `At workspace root (${workspaceRoot || rootPath})` : 'Go up to parent directory'}
             aria-label="Up"
           >
             <UpIcon />
