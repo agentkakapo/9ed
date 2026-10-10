@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { sessionBelongsToWorkDir, useChatStore } from '../../stores/chat';
 import { useWorkspaceStore } from '../../stores/workspace';
 import type { ConfigOptionInfo } from '../../types';
+import { ModelDropdown } from './ModelDropdown';
 
 export function AgentPicker() {
   const agents = useChatStore((s) => s.agents);
@@ -191,15 +192,28 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
         </div>
       )}
       {configOptions.map((opt) => (
-        <ConfigDropdown
-          key={opt.id}
-          option={opt}
-          variant={getConfigDropdownVariant(opt)}
-          isOpen={!hasActiveSession ? false : openDropdown === opt.id}
-          onToggle={() => hasActiveSession && setOpenDropdown(openDropdown === opt.id ? null : opt.id)}
-          onChange={(value) => handleChange(opt.id, value)}
-          disabled={!hasActiveSession || busy}
-        />
+        isModelOption(opt) ? (
+          <ModelDropdown
+            key={opt.id}
+            option={opt}
+            isOpen={!hasActiveSession ? false : openDropdown === opt.id}
+            onToggle={() => hasActiveSession && setOpenDropdown(openDropdown === opt.id ? null : opt.id)}
+            onClose={() => setOpenDropdown(null)}
+            onChange={(value) => handleChange(opt.id, value)}
+            disabled={!hasActiveSession || busy}
+          />
+        ) : (
+          <ConfigDropdown
+            key={opt.id}
+            option={opt}
+            variant={getConfigDropdownVariant(opt)}
+            isOpen={!hasActiveSession ? false : openDropdown === opt.id}
+            onToggle={() => hasActiveSession && setOpenDropdown(openDropdown === opt.id ? null : opt.id)}
+            onClose={() => setOpenDropdown(null)}
+            onChange={(value) => handleChange(opt.id, value)}
+            disabled={!hasActiveSession || busy}
+          />
+        )
       ))}
       <label
         className={`chat-config-toggle${autoApprove ? ' active' : ''}`}
@@ -257,6 +271,10 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
   );
 }
 
+function isModelOption(option: ConfigOptionInfo): boolean {
+  return option.id.toLowerCase().includes('model');
+}
+
 type ConfigDropdownVariant = 'compact' | 'rich';
 
 function getConfigDropdownVariant(option: ConfigOptionInfo): ConfigDropdownVariant {
@@ -264,18 +282,33 @@ function getConfigDropdownVariant(option: ConfigOptionInfo): ConfigDropdownVaria
   return 'compact';
 }
 
-function ConfigDropdown({ option, variant, isOpen, onToggle, onChange, disabled }: {
+function ConfigDropdown({ option, variant, isOpen, onToggle, onClose, onChange, disabled }: {
   option: ConfigOptionInfo;
   variant: ConfigDropdownVariant;
   isOpen: boolean;
   onToggle: () => void;
+  onClose?: () => void;
   onChange: (value: string) => void;
   disabled?: boolean;
 }) {
   const currentOption = option.options.find((o) => o.value === option.currentValue);
   const label = currentOption?.name ?? option.currentValue;
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
   const [overlayStyle, setOverlayStyle] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (triggerRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      onClose?.();
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [isOpen, onClose]);
 
   useLayoutEffect(() => {
     if (!isOpen || !triggerRef.current) return;
@@ -335,7 +368,12 @@ function ConfigDropdown({ option, variant, isOpen, onToggle, onChange, disabled 
   }, [isOpen, variant]);
 
   const dropdown = createPortal(
-    <div className={`picker-dropdown picker-dropdown-overlay picker-dropdown-${variant}`} data-overlay="true" style={overlayStyle}>
+    <div
+      ref={dropdownRef}
+      className={`picker-dropdown picker-dropdown-overlay picker-dropdown-${variant}`}
+      data-overlay="true"
+      style={overlayStyle}
+    >
       {option.options.map((val) => (
         <button
           key={val.value}

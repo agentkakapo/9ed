@@ -220,6 +220,165 @@
   cursor: not-allowed;
 }
 
+/* ── Redesigned Model Dropdown (Anthropic/Claude & Antigravity Style) ── */
+.model-menu-dropdown,
+.model-submenu-dropdown {
+  position: fixed;
+  z-index: 10000;
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  user-select: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  animation: modelMenuFadeIn 0.12s ease-out;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+@keyframes modelMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.model-menu-dropdown::-webkit-scrollbar,
+.model-submenu-dropdown::-webkit-scrollbar {
+  width: 5px;
+}
+
+.model-menu-dropdown::-webkit-scrollbar-thumb,
+.model-submenu-dropdown::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.model-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #f1f5f9;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 450;
+  line-height: 1.3;
+  text-align: left;
+  transition: background 0.1s ease, color 0.1s ease;
+  box-sizing: border-box;
+}
+
+.model-menu-item:hover,
+.model-menu-item[data-active="true"]:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.model-more-trigger[data-active="true"] {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.model-menu-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.model-menu-item-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: inherit;
+}
+
+.model-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  background: rgba(255, 255, 255, 0.09);
+  color: #a1a1aa;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 400;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.model-badge-icon {
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+
+.model-menu-item-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: 14px;
+  min-width: 18px;
+}
+
+.model-item-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #38bdf8;
+}
+
+.model-item-shortcut {
+  font-size: 0.8rem;
+  font-family: var(--font-mono, monospace);
+  font-weight: 500;
+  color: #71717a;
+}
+
+.model-menu-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 4px 2px;
+}
+
+.model-more-trigger {
+  color: #f1f5f9;
+}
+
+.model-more-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #71717a;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.model-more-trigger:hover .model-more-chevron,
+.model-more-trigger[data-active="true"] .model-more-chevron {
+  color: #cbd5e1;
+}
+
+.model-picker-trigger[data-active="true"] {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+}
+
 /* ── Context Token Usage Bar ── */
 .ctx-usage {
   display: flex;

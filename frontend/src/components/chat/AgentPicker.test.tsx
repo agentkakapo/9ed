@@ -395,3 +395,78 @@ describe('ConfigBar terminal soft toggle (VAL-HARDEN-001/007)', () => {
     expect(session?.status).toBe('streaming');
   });
 });
+
+describe('ConfigBar model dropdown', () => {
+  let container: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+
+  afterEach(() => {
+    act(() => {
+      root.unmount();
+    });
+    container.remove();
+    document.querySelectorAll('.model-menu-dropdown, .model-submenu-dropdown').forEach((el) => el.remove());
+  });
+
+  it('renders model option using ModelDropdown with full interaction support', () => {
+    resetConfigStores({ withTab: true });
+    const setConfigOptionSpy = vi.fn();
+    useChatStore.setState({
+      sessions: [makeSession({
+        id: 'live-1',
+        configOptions: [
+          {
+            id: 'model',
+            name: 'Model',
+            type: 'select',
+            currentValue: 'claude-sonnet-5-5',
+            options: [
+              { value: 'claude-opus-5-5', name: 'Opus 5.5' },
+              { value: 'claude-sonnet-5-5', name: 'Sonnet 5.5' },
+              { value: 'claude-fable-5-1', name: 'Fable 5.1' },
+              { value: 'claude-haiku-5-5', name: 'Haiku 5.5' },
+              { value: 'claude-haiku-4-5', name: 'Haiku 4.5' },
+            ],
+          },
+        ],
+      })],
+      activeSessionId: 'live-1',
+    });
+
+    act(() => {
+      root.render(<ConfigBar connected setConfigOption={setConfigOptionSpy} />);
+    });
+
+    const trigger = container.querySelector('.model-picker-trigger');
+    expect(trigger).not.toBeNull();
+    expect(trigger?.textContent).toContain('Sonnet 5.5');
+
+    // Click trigger to open
+    act(() => {
+      trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const menu = document.body.querySelector('.model-menu-dropdown');
+    expect(menu).not.toBeNull();
+    expect(menu?.textContent).toContain('Opus 5.5');
+    expect(menu?.textContent).toContain('More models');
+
+    // Select Opus 5.5
+    const opusBtn = Array.from(menu?.querySelectorAll('.model-menu-item') ?? []).find((el) => el.textContent?.includes('Opus 5.5'));
+    expect(opusBtn).toBeTruthy();
+
+    act(() => {
+      opusBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(setConfigOptionSpy).toHaveBeenCalledWith('model', 'claude-opus-5-5');
+  });
+});
+
