@@ -4,7 +4,7 @@ import { sessionBelongsToWorkDir, useChatStore } from '../../stores/chat';
 import { useWorkspaceStore } from '../../stores/workspace';
 import type { ConfigOptionInfo } from '../../types';
 import { ModelDropdown } from './ModelDropdown';
-import { cleanOptionName, hasModelEfforts, splitModelAndEffort, type EffortLevel } from './modelEffort';
+import { cleanOptionName, hasModelEfforts, normalizeConfigOption, splitModelAndEffort, type EffortLevel } from './modelEffort';
 
 export function AgentPicker() {
   const agents = useChatStore((s) => s.agents);
@@ -184,7 +184,8 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
     void setTerminalEnabled(enabled);
   };
 
-  const modelOpt = configOptions.find((opt) => isModelOption(opt));
+  const normalizedOptions = useMemo(() => configOptions.map(normalizeConfigOption), [configOptions]);
+  const modelOpt = normalizedOptions.find((opt) => isModelOption(opt));
   const effortSplitting = useMemo(() => {
     if (!modelOpt || !hasModelEfforts(modelOpt)) return null;
     return splitModelAndEffort(modelOpt);
@@ -198,7 +199,7 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
           <span className="chat-config-status-label">{busyLabel}</span>
         </div>
       )}
-      {configOptions.map((opt) => {
+      {normalizedOptions.map((opt) => {
         if (isModelOption(opt)) {
           if (effortSplitting) {
             return (
@@ -323,7 +324,7 @@ function getConfigDropdownVariant(option: ConfigOptionInfo): ConfigDropdownVaria
   return 'compact';
 }
 
-function ConfigDropdown({ option, variant, isOpen, onToggle, onClose, onChange, disabled }: {
+function ConfigDropdown({ option: rawOption, variant, isOpen, onToggle, onClose, onChange, disabled }: {
   option: ConfigOptionInfo;
   variant: ConfigDropdownVariant;
   isOpen: boolean;
@@ -332,10 +333,11 @@ function ConfigDropdown({ option, variant, isOpen, onToggle, onClose, onChange, 
   onChange: (value: string) => void;
   disabled?: boolean;
 }) {
+  const option = useMemo(() => normalizeConfigOption(rawOption), [rawOption]);
   const currentOption = option.options.find((o) => o.value === option.currentValue);
   const rawLabel = currentOption?.name ?? option.currentValue;
-  const label = cleanOptionName(rawLabel, option.id);
-  const displayLabel = option.id === 'model_effort' ? `Effort: ${label}` : label;
+  const label = cleanOptionName(rawLabel, option.id, currentOption?.description);
+  const displayLabel = label;
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const [overlayStyle, setOverlayStyle] = useState<Record<string, string>>({});
@@ -417,17 +419,21 @@ function ConfigDropdown({ option, variant, isOpen, onToggle, onClose, onChange, 
       data-overlay="true"
       style={overlayStyle}
     >
-      {option.options.map((val) => (
-        <button
-          key={val.value}
-          className="picker-dropdown-item"
-          data-active={val.value === option.currentValue ? 'true' : 'false'}
-          onClick={() => onChange(val.value)}
-          type="button"
-        >
-          {cleanOptionName(val.name, option.id)}
-        </button>
-      ))}
+      {option.options.map((val) => {
+        const itemName = cleanOptionName(val.name, option.id, val.description);
+        const isSelected = val.value === option.currentValue || itemName === label;
+        return (
+          <button
+            key={val.value}
+            className="picker-dropdown-item"
+            data-active={isSelected ? 'true' : 'false'}
+            onClick={() => onChange(val.value)}
+            type="button"
+          >
+            {itemName}
+          </button>
+        );
+      })}
     </div>,
     document.body,
   );

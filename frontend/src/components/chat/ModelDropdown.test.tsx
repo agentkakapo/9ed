@@ -303,4 +303,47 @@ describe('ModelDropdown', () => {
     expect(menu?.querySelector('.model-more-trigger')).toBeNull();
     expect(menu?.querySelector('.model-menu-divider')).toBeNull();
   });
+
+  it('renders default model cleanly as Sonnet 5.5 without "Default" or "Standard"', () => {
+    const defaultOption: ConfigOptionInfo = {
+      id: 'model',
+      name: 'Model',
+      type: 'select',
+      currentValue: 'default',
+      options: [
+        { value: 'default', name: 'Default (recommended)', description: 'Sonnet 5.5' },
+        { value: 'opus', name: 'Opus 5.5', description: 'For complex work and everyday tasks' },
+        { value: 'fable', name: 'Fable 5.1', description: 'For your toughest challenges' },
+        { value: 'sonnet', name: 'Sonnet 5.5', description: 'Most efficient for simpler tasks' },
+        { value: 'haiku', name: 'Haiku 5.5', description: 'Fastest for quick answers' },
+      ],
+    };
+
+    act(() => {
+      root.render(
+        <ModelDropdown
+          option={defaultOption}
+          isOpen={true}
+          onToggle={vi.fn()}
+          onClose={vi.fn()}
+          onChange={vi.fn()}
+        />
+      );
+    });
+
+    const trigger = container.querySelector('.model-picker-trigger');
+    expect(trigger?.textContent).toBe('Sonnet 5.5▾');
+    expect(trigger?.textContent).not.toContain('Default');
+    expect(trigger?.textContent).not.toContain('Standard');
+
+    const menu = document.body.querySelector('.model-menu-dropdown');
+    expect(menu?.textContent).not.toContain('Default');
+    expect(menu?.textContent).not.toContain('Standard');
+    expect(menu?.textContent).toContain('Sonnet 5.5');
+
+    // Only one Sonnet 5.5 item
+    const items = menu?.querySelectorAll('.model-menu-item-name');
+    const names = Array.from(items ?? []).map((el) => el.textContent?.trim());
+    expect(names.filter((n) => n === 'Sonnet 5.5')).toHaveLength(1);
+  });
 });

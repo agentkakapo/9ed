@@ -1,23 +1,99 @@
 import { describe, expect, it } from 'vitest';
-import { cleanOptionName, hasModelEfforts, parseModelEffortItem, splitModelAndEffort } from './modelEffort';
+import { cleanOptionName, hasModelEfforts, normalizeConfigOption, parseModelEffortItem, splitModelAndEffort } from './modelEffort';
 import type { ConfigOptionInfo } from '../../types';
 
 describe('cleanOptionName', () => {
-  it('strips (Default) / (default) / [Default] suffixes', () => {
+  it('strips (Default) / (default) / [Default] / (recommended) suffixes', () => {
     expect(cleanOptionName('Claude 3.5 Sonnet (default)')).toBe('Claude 3.5 Sonnet');
     expect(cleanOptionName('Sonnet 5.5 (Default)')).toBe('Sonnet 5.5');
     expect(cleanOptionName('Gemini 3.8 Flash [Default]')).toBe('Gemini 3.8 Flash');
+    expect(cleanOptionName('Claude 3.5 Sonnet (recommended)')).toBe('Claude 3.5 Sonnet');
   });
 
-  it('transforms literal Default into Standard for mode option', () => {
-    expect(cleanOptionName('Default', 'mode')).toBe('Standard');
-    expect(cleanOptionName('default', 'mode')).toBe('Standard');
+  it('resolves model Default (recommended) to model name from description', () => {
+    expect(cleanOptionName('Default (recommended)', 'model', 'Sonnet 5.5')).toBe('Sonnet 5.5');
+    expect(cleanOptionName('Default', 'model', 'Sonnet 5.5')).toBe('Sonnet 5.5');
+  });
+
+  it('resolves effort Default to Medium', () => {
+    expect(cleanOptionName('Default', 'effort')).toBe('Medium');
+    expect(cleanOptionName('default', 'effort')).toBe('Medium');
+    expect(cleanOptionName('Standard', 'effort')).toBe('Medium');
+  });
+
+  it('resolves agent Default to Claude Code', () => {
+    expect(cleanOptionName('Default', 'agent', 'Standard Claude Code agent')).toBe('Claude Code');
+    expect(cleanOptionName('default', 'agent')).toBe('Claude Code');
+    expect(cleanOptionName('Standard', 'agent')).toBe('Claude Code');
+  });
+
+  it('resolves mode Default to Manual', () => {
+    expect(cleanOptionName('Default', 'mode', 'Default permission prompt flow')).toBe('Manual');
+    expect(cleanOptionName('default', 'mode')).toBe('Manual');
+    expect(cleanOptionName('Standard', 'mode')).toBe('Manual');
   });
 
   it('keeps other option names intact', () => {
     expect(cleanOptionName('Auto Edit', 'mode')).toBe('Auto Edit');
     expect(cleanOptionName('YOLO', 'mode')).toBe('YOLO');
     expect(cleanOptionName('High', 'effort')).toBe('High');
+  });
+});
+
+describe('normalizeConfigOption', () => {
+  it('normalizes Claude models: deduplicates Sonnet 5.5, reorders top 4, preserves default selection', () => {
+    const rawClaudeModelOption: ConfigOptionInfo = {
+      id: 'model',
+      name: 'Model',
+      type: 'select',
+      currentValue: 'default',
+      options: [
+        { value: 'default', name: 'Default (recommended)', description: 'Sonnet 5.5' },
+        { value: 'opus', name: 'Opus 5.5', description: 'For complex work and everyday tasks' },
+        { value: 'fable', name: 'Fable 5.1', description: 'For your toughest challenges' },
+        { value: 'sonnet', name: 'Sonnet 5.5', description: 'Most efficient for simpler tasks' },
+        { value: 'haiku', name: 'Haiku 5.5', description: 'Fastest for quick answers' },
+      ],
+    };
+
+    const normalized = normalizeConfigOption(rawClaudeModelOption);
+    expect(normalized.options.map((o) => o.name)).toEqual([
+      'Opus 5.5',
+      'Sonnet 5.5',
+      'Fable 5.1',
+      'Haiku 5.5',
+    ]);
+    // The Sonnet 5.5 entry preserves value: 'default' so currentValue matches
+    const sonnetEntry = normalized.options.find((o) => o.name === 'Sonnet 5.5');
+    expect(sonnetEntry?.value).toBe('default');
+  });
+
+  it('normalizes Claude effort: deduplicates Medium, sorts logically, preserves default selection', () => {
+    const rawEffortOption: ConfigOptionInfo = {
+      id: 'effort',
+      name: 'Effort',
+      type: 'select',
+      currentValue: 'default',
+      options: [
+        { value: 'default', name: 'Default' },
+        { value: 'low', name: 'Low' },
+        { value: 'medium', name: 'Medium' },
+        { value: 'high', name: 'High' },
+        { value: 'xhigh', name: 'Xhigh' },
+        { value: 'max', name: 'Max' },
+      ],
+    };
+
+    const normalized = normalizeConfigOption(rawEffortOption);
+    expect(normalized.options.map((o) => o.name)).toEqual([
+      'Low',
+      'Medium',
+      'High',
+      'Xhigh',
+      'Max',
+    ]);
+    const mediumEntry = normalized.options.find((o) => o.name === 'Medium');
+    expect(mediumEntry?.value).toBe('default');
   });
 });
 

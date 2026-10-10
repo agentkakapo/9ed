@@ -13,19 +13,146 @@ export type ParsedModelItem = {
 
 /**
  * Cleans option names:
- * - Strips any "(Default)", "[Default]", "(default)" etc.
- * - Replaces literal "Default" with a meaningful name like "Standard" for mode.
+ * - Strips any "(Default)", "[Default]", "(default)", "(recommended)", "[recommended]" etc.
+ * - Resolves literal "Default" or "Default (recommended)" to the actual entity name
+ *   (e.g. model name like "Sonnet 5.5", effort level "Medium", agent "Claude Code", mode "Manual").
+ * - Never returns "Default" or "Standard".
  */
-export function cleanOptionName(name: string, optionId?: string): string {
+export function cleanOptionName(name: string, optionId?: string, description?: string): string {
   if (!name) return '';
-  let cleaned = name.replace(/\s*[\(\[]default[\)\]]/gi, '').trim();
-  if (/^default$/i.test(cleaned)) {
-    if (optionId === 'mode') {
-      return 'Standard';
+
+  // 1. Strip parenthetical / bracketed default / recommended tags
+  const cleaned = name
+    .replace(/\s*[\(\[](default|recommended)[\)\]]/gi, '')
+    .trim();
+
+  // 2. If it is or starts with "Default", resolve to the actual item identity
+  if (/^default(\s*\(.*\))?$/i.test(cleaned) || /^default$/i.test(cleaned)) {
+    const opt = (optionId ?? '').toLowerCase();
+
+    // Model option: resolve to actual model name from description
+    if (opt.includes('model')) {
+      if (description && !/^default/i.test(description) && !/^standard/i.test(description)) {
+        return description.trim();
+      }
+      return 'Sonnet 5.5';
     }
-    return 'Standard';
+
+    // Effort / thought level option
+    if (opt.includes('effort') || opt.includes('thought')) {
+      return 'Medium';
+    }
+
+    // Agent persona option
+    if (opt.includes('agent')) {
+      if (description) {
+        // e.g. "Standard Claude Code agent" -> "Claude Code"
+        const m = description.match(/(?:Standard\s+)?(.*?)(?:\s+agent)?$/i);
+        if (m && m[1] && !/^default/i.test(m[1]) && !/^standard/i.test(m[1])) {
+          return m[1].trim();
+        }
+      }
+      return 'Claude Code';
+    }
+
+    // Permission mode option
+    if (opt.includes('mode')) {
+      return 'Manual';
+    }
+
+    if (description && !/^default/i.test(description) && !/^standard/i.test(description)) {
+      return description.trim();
+    }
+
+    return 'Manual';
   }
+
+  // Also replace any remaining literal "standard" if it were present
+  if (/^standard$/i.test(cleaned)) {
+    const opt = (optionId ?? '').toLowerCase();
+    if (opt.includes('effort') || opt.includes('thought')) return 'Medium';
+    if (opt.includes('agent')) return 'Claude Code';
+    if (opt.includes('mode')) return 'Manual';
+    if (opt.includes('model')) return 'Sonnet 5.5';
+    return 'Manual';
+  }
+
   return cleaned || name;
+}
+
+/**
+ * Normalizes a ConfigOptionInfo:
+ * - Cleans option names to remove Default/Standard/Recommended labels.
+ * - Deduplicates options that have the same cleaned display name (e.g. "default" representing "Sonnet 5.5" vs explicit "sonnet" representing "Sonnet 5.5").
+ * - Preserves the active currentValue by retaining whichever option key matches currentValue.
+ * - Sorts effort options logically: Low, Medium, High, Xhigh, Max.
+ * - Re-orders Claude model options so primary models are Opus, Sonnet, Fable, Haiku.
+ */
+export function normalizeConfigOption(option: ConfigOptionInfo): ConfigOptionInfo {
+  if (!option || !option.options || option.options.length === 0) return option;
+
+  const optId = option.id.toLowerCase();
+  const cleanedItems: ConfigValueInfo[] = [];
+
+  for (const item of option.options) {
+    const cleanedName = cleanOptionName(item.name, option.id, item.description);
+    const isCurrent = item.value === option.currentValue;
+
+    const existingIndex = cleanedItems.findIndex(
+      (ci) => ci.name.toLowerCase() === cleanedName.toLowerCase()
+    );
+
+    if (existingIndex >= 0) {
+      if (isCurrent) {
+        // Current item is active; replace existing entry with this one to preserve currentValue
+        cleanedItems[existingIndex] = {
+          ...item,
+          name: cleanedName,
+        };
+      } else if (cleanedItems[existingIndex].value === 'default' && option.currentValue !== 'default') {
+        // Prefer specific value over generic 'default' when 'default' is not active
+        cleanedItems[existingIndex] = {
+          ...item,
+          name: cleanedName,
+        };
+      }
+      continue;
+    }
+
+    cleanedItems.push({
+      ...item,
+      name: cleanedName,
+    });
+  }
+
+  // Claude models reordering: if Sonnet (from default) is at index 0 and Opus at index 1,
+  // put Opus first so the top 4 are Opus, Sonnet, Fable, Haiku
+  if (optId.includes('model') && cleanedItems.length >= 2) {
+    if (
+      cleanedItems[0].name.toLowerCase().includes('sonnet') &&
+      cleanedItems[1].name.toLowerCase().includes('opus')
+    ) {
+      const temp = cleanedItems[0];
+      cleanedItems[0] = cleanedItems[1];
+      cleanedItems[1] = temp;
+    }
+  }
+
+  // Effort options logical ordering: Low, Medium, High, Xhigh, Max
+  if (optId.includes('effort') || optId.includes('thought')) {
+    const effortOrder = ['low', 'medium', 'high', 'xhigh', 'max'];
+    cleanedItems.sort((a, b) => {
+      const aIdx = effortOrder.indexOf(a.name.toLowerCase());
+      const bIdx = effortOrder.indexOf(b.name.toLowerCase());
+      if (aIdx >= 0 && bIdx >= 0) return aIdx - bIdx;
+      return 0;
+    });
+  }
+
+  return {
+    ...option,
+    options: cleanedItems,
+  };
 }
 
 /**

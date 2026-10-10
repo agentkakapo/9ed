@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ConfigOptionInfo, ConfigValueInfo } from '../../types';
-import { cleanOptionName } from './modelEffort';
+import { cleanOptionName, normalizeConfigOption } from './modelEffort';
 
 export type ModelDropdownProps = {
   option: ConfigOptionInfo;
@@ -31,16 +31,17 @@ export function getModelBadge(item: ConfigValueInfo): { text: string; icon?: str
 }
 
 export function ModelDropdown({
-  option,
+  option: rawOption,
   isOpen,
   onToggle,
   onClose,
   onChange,
   disabled,
 }: ModelDropdownProps) {
+  const option = useMemo(() => normalizeConfigOption(rawOption), [rawOption]);
   const currentOption = option.options.find((o) => o.value === option.currentValue);
   const rawLabel = currentOption?.name ?? option.currentValue ?? 'Select model';
-  const label = cleanOptionName(rawLabel, option.id);
+  const label = cleanOptionName(rawLabel, option.id, currentOption?.description);
 
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const mainMenuRef = useRef<HTMLDivElement | null>(null);
@@ -251,7 +252,8 @@ export function ModelDropdown({
           aria-label="Select Model"
         >
           {primaryModels.map((item, idx) => {
-            const isSelected = item.value === option.currentValue;
+            const itemName = cleanOptionName(item.name, option.id, item.description);
+            const isSelected = item.value === option.currentValue || itemName === label;
             const badge = getModelBadge(item);
             return (
               <button
@@ -267,7 +269,7 @@ export function ModelDropdown({
                 role="menuitem"
               >
                 <div className="model-menu-item-left">
-                  <span className="model-menu-item-name">{cleanOptionName(item.name, option.id)}</span>
+                  <span className="model-menu-item-name">{itemName}</span>
                   {badge && (
                     <span className="model-badge">
                       {badge.icon && <span className="model-badge-icon">{badge.icon}</span>}
@@ -331,7 +333,8 @@ export function ModelDropdown({
           aria-label="Older Models"
         >
           {olderModels.map((item) => {
-            const isSelected = item.value === option.currentValue;
+            const itemName = cleanOptionName(item.name, option.id, item.description);
+            const isSelected = item.value === option.currentValue || itemName === label;
             const badge = getModelBadge(item);
             return (
               <button
@@ -347,7 +350,7 @@ export function ModelDropdown({
                 role="menuitem"
               >
                 <div className="model-menu-item-left">
-                  <span className="model-menu-item-name">{cleanOptionName(item.name, option.id)}</span>
+                  <span className="model-menu-item-name">{itemName}</span>
                   {badge && (
                     <span className="model-badge">
                       {badge.icon && <span className="model-badge-icon">{badge.icon}</span>}
