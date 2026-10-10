@@ -537,36 +537,36 @@ export function IDEWorkspace() {
                     onClick={() => toggleRightPane('editor')}
                     type="button"
                     title="Toggle Code Editor"
+                    aria-label="Editor"
                   >
                     <EditorIcon />
-                    <span>Editor</span>
                   </button>
                   <button
                     className={`pane-toggle-btn${activeRightPane === 'terminal' ? ' active' : ''}`}
                     onClick={() => toggleRightPane('terminal')}
                     type="button"
                     title="Toggle Terminal (Ctrl+`)"
+                    aria-label="Terminal"
                   >
                     <TerminalIcon />
-                    <span>Terminal</span>
                   </button>
                   <button
                     className={`pane-toggle-btn${activeRightPane === 'browser' ? ' active' : ''}`}
                     onClick={() => toggleRightPane('browser')}
                     type="button"
                     title="Toggle Browser (Ctrl+Shift+B)"
+                    aria-label="Browser"
                   >
                     <BrowserIcon />
-                    <span>Browser</span>
                   </button>
                   <button
                     className={`pane-toggle-btn${activeRightPane === 'git' ? ' active' : ''}`}
                     onClick={() => toggleRightPane('git')}
                     type="button"
                     title="Toggle Git Changes (Ctrl+Shift+G)"
+                    aria-label="Git"
                   >
                     <GitIcon />
-                    <span>Git</span>
                   </button>
                 </div>
               }

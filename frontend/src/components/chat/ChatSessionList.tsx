@@ -227,7 +227,6 @@ export function ChatSessionList() {
         ) : (
           <HistoryIcon />
         )}
-        <span>History</span>
       </button>
       {open ? createPortal(dropdownContent, document.body) : null}
     </div>

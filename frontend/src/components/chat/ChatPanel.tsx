@@ -325,7 +325,6 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
                 onClick={() => setShowChatDebugPanel((value) => !value)}
               >
                 <ChatDebugIcon />
-                <span>Debug</span>
               </button>
             )}
           </div>
@@ -349,38 +348,7 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
             </div>
           </div>
         ) : !activeSession ? (
-          <div className="chat-welcome-hero">
-            <div className="chat-welcome-icon-ring">
-              <span className="chat-welcome-glyph">◈</span>
-            </div>
-            <h2 className="chat-welcome-title">Google Antigravity</h2>
-            <p className="chat-welcome-subtitle">
-              {activeProject ? `Ready to pair program in ${activeProject.name}` : 'Ready to pair program with you'}
-            </p>
-            <div className="chat-welcome-chips">
-              <button
-                className="chat-suggestion-chip"
-                type="button"
-                onClick={() => void handleSend("Explain project architecture and key components")}
-              >
-                <span className="chip-icon">🔍</span> Explain project structure
-              </button>
-              <button
-                className="chat-suggestion-chip"
-                type="button"
-                onClick={() => void handleSend("Check git status and summarize recent changes")}
-              >
-                <span className="chip-icon">🌿</span> Check git status
-              </button>
-              <button
-                className="chat-suggestion-chip"
-                type="button"
-                onClick={() => void handleSend("Run test suite and report any failures")}
-              >
-                <span className="chip-icon">🧪</span> Run tests
-              </button>
-            </div>
-          </div>
+          <div className="chat-messages" />
         ) : (
           <div className="chat-messages">
             {showChatDebugPanel && (
