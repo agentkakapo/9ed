@@ -334,8 +334,11 @@ func NewChatSession(ctx context.Context, agent AgentDescriptor, workDir string, 
 			installed := agent
 			installed.SupportsACP = true
 			installed.ACPCommand = path
-			info := acpinstall.GetAdapterInfo(agent.ID)
-			if info != nil {
+			if _, isoArgs, _ := acpinstall.IsolatedBinarySpec(agent.ID); isoArgs != nil {
+				installed.ACPArgs = isoArgs
+			} else if len(agent.ACPArgs) > 0 {
+				installed.ACPArgs = agent.ACPArgs
+			} else {
 				installed.ACPArgs = []string{}
 			}
 			sess, err := newACPSession(ctx, installed, workDir, opts)

@@ -2,6 +2,7 @@ package chat
 
 import (
 	"os/exec"
+	"runtime"
 
 	"github.com/brainplusplus/9ed/internal/chat/acpinstall"
 )
@@ -29,6 +30,18 @@ var knownAgents = []struct {
 	{"pi", "Pi", "pi", "pi-acp", []string{}},
 	{"amp", "Amp", "amp", "amp-acp", []string{}},
 	{"copilot", "GitHub Copilot", "copilot", "github-copilot-cli", []string{}},
+	{"antigravity", "Google Antigravity", "agy", "agy_acp_server.par", []string{"--uid="}},
+}
+
+func init() {
+	if runtime.GOOS == "windows" {
+		for i := range knownAgents {
+			if knownAgents[i].id == "antigravity" {
+				knownAgents[i].acpCmd = "agy_acp_server.exe"
+				knownAgents[i].acpArgs = []string{}
+			}
+		}
+	}
 }
 
 // DiscoverAgents checks PATH for known agent binaries and returns their availability (legacy).
@@ -51,9 +64,10 @@ func DiscoverAgents() []Agent {
 }
 
 var ptyFallbackArgs = map[string][]string{
-	"claude": {"--print", "--output-format", "stream-json", "--verbose"},
-	"codex":  {"--quiet"},
-	"gemini": {"--output-format", "stream-json", "--prompt"},
+	"claude":      {"--print", "--output-format", "stream-json", "--verbose"},
+	"codex":       {"--quiet"},
+	"gemini":      {"--output-format", "stream-json", "--prompt"},
+	"antigravity": {"--output-format", "stream-json", "--prompt"},
 }
 
 // DiscoverAgentDescriptors returns agents with ACP capability metadata.

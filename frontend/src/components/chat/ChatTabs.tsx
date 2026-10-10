@@ -25,6 +25,7 @@ function agentIcon(agentId: string): string {
     pi: 'π',
     amp: '⚡',
     copilot: '✈',
+    antigravity: '◈',
   };
   return icons[agentId] ?? '💬';
 }

@@ -37,6 +37,7 @@ func DetectAll() []AgentConfig {
 		detectClaude,
 		detectCodex,
 		detectGemini,
+		detectAntigravity,
 		detectPi,
 		detectAmp,
 		detectCopilot,

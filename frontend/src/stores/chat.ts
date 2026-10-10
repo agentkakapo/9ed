@@ -265,6 +265,7 @@ function fallbackTitle(agentId: string, title?: string): string {
     pi: 'Pi',
     amp: 'Amp',
     copilot: 'Copilot',
+    antigravity: 'Google Antigravity',
   };
   const agentLabel = agentLabels[agentId] ?? agentId ?? 'Chat';
   return title && title.trim() ? title : agentLabel;

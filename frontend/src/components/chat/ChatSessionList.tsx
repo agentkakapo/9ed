@@ -12,6 +12,7 @@ const agentLabels: Record<string, string> = {
   pi: 'Pi',
   amp: 'Amp',
   copilot: 'Copilot',
+  antigravity: 'Google Antigravity',
 };
 
 function formatSessionTitle(agentId: string, title: string): string {

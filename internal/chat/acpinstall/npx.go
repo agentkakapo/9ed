@@ -25,6 +25,8 @@ func registryID(agentID string) string {
 		return "amp-acp"
 	case "pi":
 		return "pi-acp"
+	case "antigravity":
+		return "antigravity-acp"
 	default:
 		return agentID
 	}
@@ -43,6 +45,8 @@ func localID(registryID string) string {
 		return "amp"
 	case "pi-acp":
 		return "pi"
+	case "antigravity-acp":
+		return "antigravity"
 	default:
 		return registryID
 	}
