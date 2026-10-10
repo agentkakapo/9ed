@@ -201,22 +201,30 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
           disabled={!hasActiveSession || busy}
         />
       ))}
-      <label className="chat-config-toggle" title="Auto-approve all tool permissions (yolo mode)">
+      <label
+        className={`chat-config-toggle${autoApprove ? ' active' : ''}`}
+        title="Auto-approve all tool permissions (yolo mode)"
+      >
         <input
           type="checkbox"
           checked={autoApprove}
           onChange={handleAutoApproveToggle}
           disabled={busy}
         />
-        <span className="chat-config-toggle-label">🔓 Auto</span>
+        <span className="chat-config-dot" aria-hidden="true" />
+        <span className="chat-config-toggle-label">Auto</span>
       </label>
-      <label className="chat-config-toggle" title="Include gitignored files in @ mentions">
+      <label
+        className={`chat-config-toggle${includeIgnored ? ' active' : ''}`}
+        title="Include gitignored files in @ mentions"
+      >
         <input
           type="checkbox"
           checked={includeIgnored}
           onChange={toggleIncludeIgnored}
           disabled={busy}
         />
+        <span className="chat-config-dot" aria-hidden="true" />
         <span className="chat-config-toggle-label">@ ignored</span>
       </label>
       <label
@@ -229,6 +237,7 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
           onChange={handleBrowserToggle}
           disabled={busy || (!!activeSession && !browserToggleEnabled)}
         />
+        <span className="chat-config-dot" aria-hidden="true" />
         <span className="chat-config-toggle-label">Browser</span>
       </label>
       <label
@@ -241,6 +250,7 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
           onChange={handleTerminalToggle}
           disabled={busy || !terminalToggleEnabled}
         />
+        <span className="chat-config-dot" aria-hidden="true" />
         <span className="chat-config-toggle-label">Terminal</span>
       </label>
     </div>

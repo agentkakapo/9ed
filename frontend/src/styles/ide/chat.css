@@ -311,6 +311,74 @@
   box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
 }
 
+.chat-config-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--sidebar-fg-muted);
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-weight: 500;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.chat-config-toggle input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.chat-config-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #64748b;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.chat-config-toggle:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f1f5f9;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.chat-config-toggle.active {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #ffffff;
+}
+
+.chat-config-toggle.active .chat-config-dot {
+  background: var(--accent-emerald);
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.8);
+}
+
+.chat-config-toggle-mcp.active {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: var(--accent-cyan);
+}
+
+.chat-config-toggle-mcp.active .chat-config-dot {
+  background: var(--accent-cyan);
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.9);
+}
+
+.chat-config-toggle.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ── Chat Messages Stream ── */
 .chat-main {
   flex: 1;

@@ -77,7 +77,7 @@ export type Project = {
   activeBrowserTabId?: string | null;
 };
 
-export type ActivePanel = 'explorer' | 'search' | 'projects' | 'terminal' | 'git' | 'browser' | 'settings';
+export type ActivePanel = 'sessions' | 'explorer' | 'search' | 'projects' | 'terminal' | 'git' | 'browser' | 'settings';
 
 export type AppConfig = {
   workspaceRoot: string;
