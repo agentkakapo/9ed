@@ -28,35 +28,6 @@ function ChatDebugIcon() {
   );
 }
 
-function ContextUsageBar({ contextUsed, contextWindow, costAmount, costCurrency }: { contextUsed?: number; contextWindow?: number; costAmount?: number; costCurrency?: string }) {
-  if (!contextUsed || !contextWindow || contextWindow <= 0) return null;
-
-  const pct = Math.min((contextUsed / contextWindow) * 100, 100);
-  const usedK = (contextUsed / 1000).toFixed(1).replace(/\.0$/, '');
-  const windowK = (contextWindow / 1000).toFixed(0);
-  const pctDisplay = pct.toFixed(0);
-
-  let barColor = 'var(--ctx-bar-low)';
-  if (pct > 80) barColor = 'var(--ctx-bar-high, #ef4444)';
-  else if (pct > 60) barColor = 'var(--ctx-bar-mid, #f59e0b)';
-
-  const costStr = costAmount && costAmount > 0 ? `${costCurrency === 'USD' ? '$' : costCurrency ? costCurrency + ' ' : '$'}${costAmount.toFixed(4)}` : '';
-
-  return (
-    <div className="ctx-usage" title={`${contextUsed.toLocaleString()} / ${contextWindow.toLocaleString()} tokens`}>
-      <div className="ctx-usage-label">
-        <span className="ctx-usage-icon">🧠</span>
-        <span className="ctx-usage-text">{usedK}k / {windowK}k</span>
-        <span className="ctx-usage-pct">{pctDisplay}%</span>
-        {costStr && <span className="ctx-usage-cost">{costStr}</span>}
-      </div>
-      <div className="ctx-usage-track">
-        <div className="ctx-usage-fill" style={{ width: `${pct}%`, background: barColor }} />
-      </div>
-    </div>
-  );
-}
-
 const agentGlyphs: Record<string, string> = {
   antigravity: '◈',
   claude: '⚑',
@@ -444,17 +415,7 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
         )}
       </div>
       <div className="chat-bottom-bar">
-        <ContextUsageBar contextUsed={activeSession?.contextUsed} contextWindow={activeSession?.contextWindow} costAmount={activeSession?.costAmount} costCurrency={activeSession?.costCurrency} />
         {!isArchived && activeSession && <ChatQueue sessionId={activeSession.id} onSendNow={handleSend} />}
-        {showConfigBar && (
-          <ConfigBar
-            setConfigOption={setConfigOption}
-            setAutoApprove={setAutoApprove}
-            connected={connected}
-            busy={isConnecting || restoring}
-            busyLabel={configBusyLabel}
-          />
-        )}
         <ChatInput
           onSend={handleSend}
           onCancel={cancel}
@@ -462,6 +423,19 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
           disabled={(isArchived && !canResumeArchived) || isConnecting}
           canSend={connected}
           lockedBy={lockedBy}
+          footer={showConfigBar ? ({ openFilePicker, toggleVoice, voiceActive, voiceSupported }) => (
+            <ConfigBar
+              setConfigOption={setConfigOption}
+              setAutoApprove={setAutoApprove}
+              connected={connected}
+              busy={isConnecting || restoring}
+              busyLabel={configBusyLabel}
+              onAttach={openFilePicker}
+              onToggleVoice={toggleVoice}
+              voiceActive={voiceActive}
+              voiceSupported={voiceSupported}
+            />
+          ) : undefined}
         />
       </div>
     </div>

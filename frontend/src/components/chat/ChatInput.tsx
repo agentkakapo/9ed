@@ -6,6 +6,13 @@ import type { QueuedMessage } from '../../stores/chat';
 import { useWorkspaceStore } from '../../stores/workspace';
 import type { BrowserElementSelection, DirEntry } from '../../types';
 
+export type ChatInputFooterProps = {
+  openFilePicker: () => void;
+  toggleVoice: () => void;
+  voiceActive: boolean;
+  voiceSupported: boolean;
+};
+
 type ChatInputProps = {
   onSend: (content: string, attachments?: Attachment[]) => void | Promise<void>;
   onCancel: () => void;
@@ -14,6 +21,7 @@ type ChatInputProps = {
   canSend?: boolean;
   /** ADR-0005: when set, chat input is locked by another client. */
   lockedBy?: string;
+  footer?: React.ReactNode | ((props: ChatInputFooterProps) => React.ReactNode);
 };
 
 export type Attachment = {
@@ -42,13 +50,22 @@ type SpeechRecognitionLike = {
   onend: (() => void) | null;
 };
 
-function MicIcon() {
+export function MicIcon() {
   return (
-    <svg className="chat-action-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+    <svg className="chat-action-icon" width="14" height="14" viewBox="0 0 20 20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <path d="M10 3.25a2.25 2.25 0 0 0-2.25 2.25v4a2.25 2.25 0 0 0 4.5 0v-4A2.25 2.25 0 0 0 10 3.25Z" />
       <path d="M5.75 9.25v.25a4.25 4.25 0 0 0 8.5 0v-.25" />
       <path d="M10 13.75v2.5" />
       <path d="M7.75 16.25h4.5" />
+    </svg>
+  );
+}
+
+function ReturnIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="9 10 4 15 9 20" />
+      <path d="M20 4v7a4 4 0 0 1-4 4H4" />
     </svg>
   );
 }
@@ -83,7 +100,7 @@ async function requestMicrophoneAccess(): Promise<{ ok: boolean; blocked: boolea
   }
 }
 
-export function ChatInput({ onSend, onCancel, streaming, disabled, canSend = true, lockedBy }: ChatInputProps) {
+export function ChatInput({ onSend, onCancel, streaming, disabled, canSend = true, lockedBy, footer }: ChatInputProps) {
   const [value, setValue] = useState('');
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -539,7 +556,7 @@ export function ChatInput({ onSend, onCancel, streaming, disabled, canSend = tru
           <textarea
             ref={textareaRef}
             className="chat-textarea"
-            placeholder="Ask something..."
+            placeholder="Type / for commands"
             value={value}
             onChange={(e) => {
               setValue(e.target.value);
@@ -554,29 +571,9 @@ export function ChatInput({ onSend, onCancel, streaming, disabled, canSend = tru
           />
         </div>
         <div className="chat-composer-actions">
-          <button
-            className="chat-attach-btn"
-            onClick={() => fileInputRef.current?.click()}
-            type="button"
-            title="Attach file (or type @ to mention)"
-            disabled={effectiveDisabled}
-          >
-            <span aria-hidden="true">+</span>
-          </button>
-          {voiceSupported && (
-            <button
-              className={`chat-voice-btn${voiceActive ? ' active' : ''}`}
-              onClick={toggleVoiceInput}
-              type="button"
-              title={voiceActive ? 'Stop voice input' : 'Start voice input'}
-              disabled={effectiveDisabled}
-            >
-              <MicIcon />
-            </button>
-          )}
           {streaming ? (
             <button className="chat-send-btn stop" onClick={onCancel} type="button" title="Stop response">
-              <span aria-hidden="true">[]</span>
+              <span aria-hidden="true">■</span>
             </button>
           ) : (
             <button
@@ -584,13 +581,21 @@ export function ChatInput({ onSend, onCancel, streaming, disabled, canSend = tru
               onClick={handleSend}
               disabled={(!value.trim() && attachments.length === 0) || effectiveDisabled || !canSend}
               type="button"
-              title="Send message"
+              title="Send message (Enter)"
             >
-              <span aria-hidden="true">^</span>
+              <ReturnIcon />
             </button>
           )}
         </div>
       </div>
+      {typeof footer === 'function'
+        ? footer({
+            openFilePicker: () => fileInputRef.current?.click(),
+            toggleVoice: toggleVoiceInput,
+            voiceActive,
+            voiceSupported,
+          })
+        : footer}
       <input
         ref={fileInputRef}
         type="file"

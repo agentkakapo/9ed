@@ -1,9 +1,12 @@
 import { createPortal } from 'react-dom';
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { sessionBelongsToWorkDir, useChatStore } from '../../stores/chat';
 import { useWorkspaceStore } from '../../stores/workspace';
 import type { ConfigOptionInfo } from '../../types';
 import { ModelDropdown } from './ModelDropdown';
+import { EffortSlider } from './EffortSlider';
+import { UsageRing } from './UsageRing';
+import { MicIcon } from './ChatInput';
 import { cleanOptionName, hasModelEfforts, normalizeConfigOption, splitModelAndEffort, type EffortLevel } from './modelEffort';
 
 export function AgentPicker() {
@@ -105,11 +108,29 @@ type ConfigBarProps = {
   connected?: boolean;
   busy?: boolean;
   busyLabel?: string | null;
+  onAttach?: () => void;
+  onToggleVoice?: () => void;
+  voiceActive?: boolean;
+  voiceSupported?: boolean;
 };
 
 // `connected` remains in the public prop API (ChatPanel still passes it) but soft
 // MCP toggles are no longer gated on WS connection / idle hard-restart safety.
-export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connected = false, busy = false, busyLabel = null }: ConfigBarProps) {
+export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connected = false, busy = false, busyLabel = null, onAttach, onToggleVoice, voiceActive = false, voiceSupported = false }: ConfigBarProps) {
+  const [extrasOpen, setExtrasOpen] = useState(false);
+  const extrasRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!extrasOpen) return;
+    const onDown = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      if (!target) return;
+      if (extrasRef.current?.contains(target)) return;
+      if (target.closest?.('.picker-dropdown-overlay')) return;
+      setExtrasOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [extrasOpen]);
   const activeSessionId = useChatStore((s) => s.activeSessionId);
   const sessions = useChatStore((s) => s.sessions);
   const activeProject = useWorkspaceStore((s) => s.projects.find((p) => p.id === s.activeProjectId) ?? null);
@@ -191,124 +212,160 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
     return splitModelAndEffort(modelOpt);
   }, [modelOpt]);
 
+  const isEffortOption = (opt: ConfigOptionInfo) => {
+    const id = opt.id.toLowerCase();
+    return !isModelOption(opt) && (id.includes('effort') || id.includes('thought'));
+  };
+  const effortOpt = normalizedOptions.find(isEffortOption);
+  const modeOpt = normalizedOptions.find((opt) => !isModelOption(opt) && !isEffortOption(opt) && opt.id.toLowerCase().includes('mode'));
+  const extraOpts = normalizedOptions.filter((opt) => opt !== modelOpt && opt !== effortOpt && opt !== modeOpt);
+  const dropdownProps = (id: string) => ({
+    isOpen: !hasActiveSession ? false : openDropdown === id,
+    onToggle: () => hasActiveSession && setOpenDropdown(openDropdown === id ? null : id),
+    onClose: () => setOpenDropdown(null),
+    disabled: !hasActiveSession || busy,
+  });
+
+  const toggleRow = (
+    label: string,
+    title: string,
+    checked: boolean,
+    onChange: () => void,
+    disabled: boolean,
+    extraClass = '',
+    disabledClass = false,
+  ) => (
+    <label
+      className={`chat-config-toggle${extraClass ? ` ${extraClass}` : ''}${checked ? ' active' : ''}${disabledClass ? ' disabled' : ''}`}
+      title={title}
+    >
+      <input type="checkbox" checked={checked} onChange={onChange} disabled={disabled} />
+      <span className="chat-config-toggle-label">{label}</span>
+      <span className="chat-config-switch" aria-hidden="true" />
+    </label>
+  );
+
   return (
-    <div className="chat-config-bar">
-      {busyLabel && (
-        <div className="chat-config-status" aria-live="polite">
-          <span className="chat-connecting-spinner chat-inline-spinner" />
-          <span className="chat-config-status-label">{busyLabel}</span>
+    <div className="chat-footer-bar">
+      <div className="chat-footer-left">
+        <div className="chat-extras-wrap" ref={extrasRef}>
+          <button
+            type="button"
+            className={`chat-footer-action-btn chat-extras-btn${extrasOpen ? ' active' : ''}`}
+            onClick={() => setExtrasOpen((v) => !v)}
+            title="Attachments and options"
+            aria-label="Attachments and options"
+            aria-haspopup="menu"
+            aria-expanded={extrasOpen}
+          >
+            +
+          </button>
+          <div className={`chat-extras-popover${extrasOpen ? ' open' : ''}`} role="menu">
+            {onAttach && (
+              <button
+                type="button"
+                className="chat-extras-item"
+                onClick={() => { setExtrasOpen(false); onAttach(); }}
+              >
+                Attach file or image
+              </button>
+            )}
+            {toggleRow(
+              'Browser',
+              browserToggleTitle,
+              browserCurrentEnabled,
+              handleBrowserToggle,
+              busy || (!!activeSession && !browserToggleEnabled),
+              'chat-config-toggle-mcp',
+              !!activeSession && !browserToggleEnabled,
+            )}
+            {toggleRow(
+              'Terminal',
+              terminalToggleTitle,
+              terminalCurrentEnabled,
+              handleTerminalToggle,
+              busy || !terminalToggleEnabled,
+              'chat-config-toggle-mcp',
+              !terminalToggleEnabled,
+            )}
+            {toggleRow('@ ignored', 'Include gitignored files in @ mentions', includeIgnored, toggleIncludeIgnored, busy)}
+            {toggleRow('Auto-approve', 'Auto-approve all tool permissions (yolo mode)', autoApprove, handleAutoApproveToggle, busy)}
+            {extraOpts.map((opt) => (
+              <ConfigDropdown
+                key={opt.id}
+                option={opt}
+                variant={getConfigDropdownVariant(opt)}
+                {...dropdownProps(opt.id)}
+                onChange={(value) => handleChange(opt.id, value)}
+              />
+            ))}
+          </div>
         </div>
-      )}
-      {normalizedOptions.map((opt) => {
-        if (isModelOption(opt)) {
-          if (effortSplitting) {
-            return (
-              <Fragment key={opt.id}>
-                <ModelDropdown
-                  key={opt.id}
-                  option={effortSplitting.baseModelOption}
-                  isOpen={!hasActiveSession ? false : openDropdown === opt.id}
-                  onToggle={() => hasActiveSession && setOpenDropdown(openDropdown === opt.id ? null : opt.id)}
-                  onClose={() => setOpenDropdown(null)}
-                  onChange={(baseName) => {
-                    const fullVal = effortSplitting.resolveModelValue(baseName, effortSplitting.currentEffort);
-                    handleChange(opt.id, fullVal);
-                  }}
-                  disabled={!hasActiveSession || busy}
-                />
-                <ConfigDropdown
-                  key={`${opt.id}_effort`}
-                  option={effortSplitting.effortOption}
-                  variant="compact"
-                  isOpen={!hasActiveSession ? false : openDropdown === `${opt.id}_effort`}
-                  onToggle={() => hasActiveSession && setOpenDropdown(openDropdown === `${opt.id}_effort` ? null : `${opt.id}_effort`)}
-                  onClose={() => setOpenDropdown(null)}
-                  onChange={(newEffort) => {
-                    const fullVal = effortSplitting.resolveModelValue(effortSplitting.currentBaseModel, newEffort as EffortLevel);
-                    handleChange(opt.id, fullVal);
-                  }}
-                  disabled={!hasActiveSession || busy}
-                />
-              </Fragment>
-            );
-          }
-          return (
-            <ModelDropdown
-              key={opt.id}
-              option={opt}
-              isOpen={!hasActiveSession ? false : openDropdown === opt.id}
-              onToggle={() => hasActiveSession && setOpenDropdown(openDropdown === opt.id ? null : opt.id)}
-              onClose={() => setOpenDropdown(null)}
-              onChange={(value) => handleChange(opt.id, value)}
-              disabled={!hasActiveSession || busy}
-            />
-          );
-        }
-        return (
+        {voiceSupported && onToggleVoice && (
+          <button
+            type="button"
+            className={`chat-footer-action-btn chat-mic-btn${voiceActive ? ' active' : ''}`}
+            onClick={onToggleVoice}
+            title={voiceActive ? 'Stop voice input' : 'Voice input'}
+            aria-label={voiceActive ? 'Stop voice input' : 'Voice input'}
+          >
+            <MicIcon />
+          </button>
+        )}
+        {modeOpt && (
           <ConfigDropdown
-            key={opt.id}
-            option={opt}
-            variant={getConfigDropdownVariant(opt)}
-            isOpen={!hasActiveSession ? false : openDropdown === opt.id}
-            onToggle={() => hasActiveSession && setOpenDropdown(openDropdown === opt.id ? null : opt.id)}
-            onClose={() => setOpenDropdown(null)}
-            onChange={(value) => handleChange(opt.id, value)}
-            disabled={!hasActiveSession || busy}
+            option={modeOpt}
+            variant="compact"
+            {...dropdownProps(modeOpt.id)}
+            onChange={(value) => handleChange(modeOpt.id, value)}
           />
-        );
-      })}
-      <label
-        className={`chat-config-toggle${autoApprove ? ' active' : ''}`}
-        title="Auto-approve all tool permissions (yolo mode)"
-      >
-        <input
-          type="checkbox"
-          checked={autoApprove}
-          onChange={handleAutoApproveToggle}
-          disabled={busy}
+        )}
+        {busyLabel && (
+          <div className="chat-config-status" aria-live="polite">
+            <span className="chat-connecting-spinner chat-inline-spinner" />
+            <span className="chat-config-status-label">{busyLabel}</span>
+          </div>
+        )}
+      </div>
+      <div className="chat-footer-right">
+        {modelOpt && (effortSplitting ? (
+          <>
+            <ModelDropdown
+              option={effortSplitting.baseModelOption}
+              {...dropdownProps(modelOpt.id)}
+              onChange={(baseName) => {
+                handleChange(modelOpt.id, effortSplitting.resolveModelValue(baseName, effortSplitting.currentEffort));
+              }}
+            />
+            <EffortSlider
+              option={effortSplitting.effortOption}
+              {...dropdownProps(`${modelOpt.id}_effort`)}
+              onChange={(newEffort) => {
+                handleChange(modelOpt.id, effortSplitting.resolveModelValue(effortSplitting.currentBaseModel, newEffort as EffortLevel));
+              }}
+            />
+          </>
+        ) : (
+          <ModelDropdown
+            option={modelOpt}
+            {...dropdownProps(modelOpt.id)}
+            onChange={(value) => handleChange(modelOpt.id, value)}
+          />
+        ))}
+        {effortOpt && (
+          <EffortSlider
+            option={effortOpt}
+            {...dropdownProps(effortOpt.id)}
+            onChange={(value) => handleChange(effortOpt.id, value)}
+          />
+        )}
+        <UsageRing
+          contextUsed={activeSession?.contextUsed}
+          contextWindow={activeSession?.contextWindow}
+          costAmount={activeSession?.costAmount}
+          costCurrency={activeSession?.costCurrency}
         />
-        <span className="chat-config-dot" aria-hidden="true" />
-        <span className="chat-config-toggle-label">Auto</span>
-      </label>
-      <label
-        className={`chat-config-toggle${includeIgnored ? ' active' : ''}`}
-        title="Include gitignored files in @ mentions"
-      >
-        <input
-          type="checkbox"
-          checked={includeIgnored}
-          onChange={toggleIncludeIgnored}
-          disabled={busy}
-        />
-        <span className="chat-config-dot" aria-hidden="true" />
-        <span className="chat-config-toggle-label">@ ignored</span>
-      </label>
-      <label
-        className={`chat-config-toggle chat-config-toggle-mcp${browserCurrentEnabled ? ' active' : ''}${activeSession && !browserToggleEnabled ? ' disabled' : ''}`}
-        title={browserToggleTitle}
-      >
-        <input
-          type="checkbox"
-          checked={browserCurrentEnabled}
-          onChange={handleBrowserToggle}
-          disabled={busy || (!!activeSession && !browserToggleEnabled)}
-        />
-        <span className="chat-config-dot" aria-hidden="true" />
-        <span className="chat-config-toggle-label">Browser</span>
-      </label>
-      <label
-        className={`chat-config-toggle chat-config-toggle-mcp${terminalCurrentEnabled ? ' active' : ''}${!terminalToggleEnabled ? ' disabled' : ''}`}
-        title={terminalToggleTitle}
-      >
-        <input
-          type="checkbox"
-          checked={terminalCurrentEnabled}
-          onChange={handleTerminalToggle}
-          disabled={busy || !terminalToggleEnabled}
-        />
-        <span className="chat-config-dot" aria-hidden="true" />
-        <span className="chat-config-toggle-label">Terminal</span>
-      </label>
+      </div>
     </div>
   );
 }
