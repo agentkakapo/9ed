@@ -22,6 +22,8 @@ type ChatInputProps = {
   /** ADR-0005: when set, chat input is locked by another client. */
   lockedBy?: string;
   footer?: React.ReactNode | ((props: ChatInputFooterProps) => React.ReactNode);
+  topContent?: React.ReactNode;
+  placeholder?: string;
 };
 
 export type Attachment = {
@@ -100,7 +102,7 @@ async function requestMicrophoneAccess(): Promise<{ ok: boolean; blocked: boolea
   }
 }
 
-export function ChatInput({ onSend, onCancel, streaming, disabled, canSend = true, lockedBy, footer }: ChatInputProps) {
+export function ChatInput({ onSend, onCancel, streaming, disabled, canSend = true, lockedBy, footer, topContent, placeholder }: ChatInputProps) {
   const [value, setValue] = useState('');
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -551,12 +553,13 @@ export function ChatInput({ onSend, onCancel, streaming, disabled, canSend = tru
           Input locked by {lockedBy}
         </div>
       )}
+      {topContent}
       <div className="chat-composer-shell">
         <div className="chat-textarea-wrap">
           <textarea
             ref={textareaRef}
             className="chat-textarea"
-            placeholder="Type / for commands"
+            placeholder={placeholder ?? 'Type / for commands'}
             value={value}
             onChange={(e) => {
               setValue(e.target.value);

@@ -9,7 +9,45 @@ import { ChatQueue } from './ChatQueue';
 import { PermissionDialog } from './PermissionDialog';
 import { ConfigBar } from './AgentPicker';
 import { ChatSessionList } from './ChatSessionList';
+import { NewChatBar } from './NewChatBar';
 import type { ChatSessionInfo } from '../../types';
+
+function NewChatHero({ onPromptSelect }: { onPromptSelect: (text: string) => void }) {
+  const suggestions = [
+    { title: 'Explain this codebase', desc: 'Overview of project structure and architecture' },
+    { title: 'Find bugs & edge cases', desc: 'Inspect recent changes and spot potential issues' },
+    { title: 'Run tests & fix errors', desc: 'Execute the test suite and resolve failures' },
+    { title: 'Implement a new feature', desc: 'Plan and write code with full test coverage' },
+  ];
+
+  return (
+    <div className="new-chat-hero">
+      <div className="new-chat-hero-icon" aria-hidden="true">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d97757" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" stroke="#d97757" strokeOpacity="0.3" strokeWidth="1" fill="#d97757" fillOpacity="0.08" />
+          <path d="m10 15 5-3-5-3v6Z" fill="#d97757" stroke="none" />
+        </svg>
+      </div>
+      <h2 className="new-chat-hero-title">What can I help you build?</h2>
+      <p className="new-chat-hero-subtitle">
+        Select a project and branch below, or start with a common task:
+      </p>
+      <div className="new-chat-suggestions-grid">
+        {suggestions.map((s) => (
+          <button
+            key={s.title}
+            type="button"
+            className="new-chat-suggestion-card"
+            onClick={() => onPromptSelect(s.title)}
+          >
+            <span className="suggestion-card-title">{s.title}</span>
+            <span className="suggestion-card-desc">{s.desc}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const AGENT_RETRY_DELAYS_MS = [500, 1500, 4000];
 
@@ -98,7 +136,8 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
   const canResumeArchived = Boolean(activeSession?.kind === 'archived' && activeSession.agentId && activeSession.workDir);
   // ADR-0005 VAL-PTY-007: pass the lock holder so ChatInput disables + shows banner.
   const lockedBy = activeSession?.inputLocked ? activeSession.lockedBy : undefined;
-  const showConfigBar = !isArchived || isConnecting || restoring;
+  const isNewChat = useChatStore((s) => s.isNewChat);
+  const showConfigBar = !isArchived || isConnecting || restoring || !activeSession;
   const lastLiveToolCall = activeSession
     ? [...activeSession.messages].reverse().find((message) => message.role === 'tool_call' && message.toolCall)
     : undefined;
@@ -159,6 +198,7 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
   useEffect(() => {
     if (!activeProject) return;
     if (activeSession) return;
+    if (isNewChat) return;
 
     const remembered = projectSessions.find((session) => session.id === rememberedProjectSessionId);
     const fallback = remembered ?? projectSessions[projectSessions.length - 1] ?? null;
@@ -177,7 +217,7 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
         }
       }
     }
-  }, [activeProject?.path, activeSession, activeSessionId, historySessions, loadHistorySession, projectSessionIds, projectSessions, rememberedProjectSessionId, restoring, setActiveSession]);
+  }, [activeProject?.path, activeSession, activeSessionId, historySessions, isNewChat, loadHistorySession, projectSessionIds, projectSessions, rememberedProjectSessionId, restoring, setActiveSession]);
 
   const messages = activeSession?.messages;
   const lastMsgContent = messages?.[messages.length - 1]?.content;
@@ -228,6 +268,7 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
         };
         createSessionStore(session);
         setActiveSession(session.id);
+        useChatStore.getState().cancelNewChat();
         sendMessage(content, undefined, attachments);
       } catch (err) {
         console.error('Failed to auto-create chat session on send:', err);
@@ -275,7 +316,7 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
           <div className="center-session-info">
             <span className="session-project-tag">{activeProject?.name ?? '9ed'}</span>
             <span className="session-title-divider">/</span>
-            <span className="session-title-text">{activeSession?.title || 'Chat'}</span>
+            <span className="session-title-text">{activeSession ? (activeSession.title || 'Chat') : 'New Chat'}</span>
             {activeSession && (
               <span className="center-agent-badge" data-agent={activeSession.agentId}>
                 <span className="center-agent-glyph">{agentGlyphs[activeSession.agentId] ?? '◈'}</span>
@@ -317,7 +358,9 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
             </div>
           </div>
         ) : !activeSession ? (
-          <div className="chat-messages" />
+          <div className="chat-messages chat-messages-new-chat">
+            <NewChatHero onPromptSelect={handleSend} />
+          </div>
         ) : (
           <div className="chat-messages">
             {showChatDebugPanel && (
@@ -423,6 +466,8 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
           disabled={(isArchived && !canResumeArchived) || isConnecting}
           canSend={connected}
           lockedBy={lockedBy}
+          placeholder={!activeSession ? 'Describe a task or ask a question' : 'Type / for commands'}
+          topContent={!activeSession ? <NewChatBar /> : undefined}
           footer={showConfigBar ? ({ openFilePicker, toggleVoice, voiceActive, voiceSupported }) => (
             <ConfigBar
               setConfigOption={setConfigOption}

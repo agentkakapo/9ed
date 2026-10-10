@@ -18,8 +18,8 @@ import { BrowserPanel } from '../../components/browser/BrowserPanel';
 import { SettingsPanel } from '../../components/settings/SettingsPanel';
 import { BottomNav, type MobileView } from '../../components/shared/BottomNav';
 import { ShortcutsHelp } from '../../components/shared/ShortcutsHelp';
-import { getFileContent, createChatSession } from '../../api';
-import type { FileTab, ChatSessionInfo } from '../../types';
+import { getFileContent } from '../../api';
+import type { FileTab } from '../../types';
 
 export const recentSaveTimestamps = new Map<string, number>();
 
@@ -152,19 +152,7 @@ export function IDEWorkspace() {
   const openFile = useWorkspaceStore((s) => s.openFile);
   const toggleSidebar = useWorkspaceStore((s) => s.toggleSidebar);
   const setActivePanel = useWorkspaceStore((s) => s.setActivePanel);
-
-  // Chat store selectors
-  const agents = useChatStore((s) => s.agents);
   const selectedAgentId = useChatStore((s) => s.selectedAgentId);
-  const setSelectedAgent = useChatStore((s) => s.setSelectedAgent);
-  const setActiveSession = useChatStore((s) => s.setActiveSession);
-  const createSessionStore = useChatStore((s) => s.createSession);
-  const useActiveTerminal = useChatStore((s) => s.useActiveTerminal);
-  const activeTerminalId = useChatStore((s) => s.activeTerminalId);
-  const useActiveBrowser = useChatStore((s) => s.useActiveBrowser);
-  const browserSelection = useChatStore((s) => s.browserSelection);
-  const browserSelectionMode = useChatStore((s) => s.browserSelectionMode);
-  const browserSelectionCapture = useChatStore((s) => s.browserSelectionCapture);
 
   // Right sidebar starts collapsed as requested
   const [activeRightPane, setActiveRightPane] = useState<RightPaneType>(null);
@@ -295,46 +283,10 @@ export function IDEWorkspace() {
     setActiveRightPane((current) => (current === pane ? null : pane));
   };
 
-  const handleGlobalNewChat = async () => {
-    if (!activeProject) return;
-    const available = agents.filter((a) => a.available);
-    const agentId = selectedAgentId && agents.some((a) => a.id === selectedAgentId && a.available)
-      ? selectedAgentId
-      : (available[0]?.id ?? 'antigravity');
+  const startNewChat = useChatStore((s) => s.startNewChat);
 
-    const agent = agents.find((a) => a.id === agentId);
-    if (!agent) return;
-
-    setSelectedAgent(agentId);
-    try {
-      const terminalEnabled = useActiveTerminal && !!activeTerminalId;
-      const browserTabId = activeProject.activeBrowserTabId ?? null;
-      const browserEnabled = useActiveBrowser && !!browserTabId;
-
-      const created = await createChatSession(agentId, activeProject.path, terminalEnabled, terminalEnabled ? activeTerminalId : undefined, browserEnabled, browserTabId);
-      const newSession: ChatSessionInfo = {
-        id: created.id,
-        recordId: created.resumedFrom ?? created.id,
-        agentId,
-        title: agent.label ?? 'Chat',
-        messages: [],
-        status: 'idle',
-        createdAt: Date.now(),
-        kind: 'live',
-        workDir: created.workDir ?? activeProject.path,
-        acpSessionId: created.acpSessionId,
-        useActiveTerminal: terminalEnabled,
-        terminalId: terminalEnabled ? activeTerminalId : undefined,
-        useActiveBrowser: browserEnabled,
-        browserSelection: browserEnabled ? browserSelection : null,
-        browserSelectionMode,
-        browserSelectionCapture: browserEnabled ? browserSelectionCapture : null,
-      };
-      createSessionStore(newSession);
-      setActiveSession(newSession.id);
-    } catch (err) {
-      console.error('Failed to create new chat session:', err);
-    }
+  const handleGlobalNewChat = () => {
+    startNewChat(activeProject?.id);
   };
 
   useEffect(() => {

@@ -78,11 +78,14 @@ type ChatState = {
   activeTerminalId: string | null;
   restoring: boolean;
   lastRestoreError: ChatRestoreError | null;
+  isNewChat: boolean;
 
   loadAgents: (agents: ChatAgent[]) => void;
   setSelectedAgent: (id: string) => void;
   createSession: (session: ChatSessionInfo) => void;
   setActiveSession: (id: string | null) => void;
+  startNewChat: (projectId?: string) => void;
+  cancelNewChat: () => void;
   addMessage: (sessionId: string, message: ChatMessage) => void;
   appendToLastMessage: (sessionId: string, chunk: string) => void;
   handleChatEvent: (sessionId: string, event: ChatEvent) => void;
@@ -513,6 +516,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   browserSelectionCapture: null,
   restoring: false,
   lastRestoreError: null,
+  isNewChat: false,
 
   loadAgents: (agents) => set((state) => {
     const nextSelected = agents.some((agent) => agent.id === state.selectedAgentId && agent.available)
@@ -543,12 +547,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
       };
       return {
         sessions: nextState.sessions,
+        isNewChat: false,
         ...activateSessionState(nextState, normalized.id),
       };
     });
   },
 
-  setActiveSession: (id) => set((state) => activateSessionState(state, id)),
+  setActiveSession: (id) => set((state) => ({
+    ...activateSessionState(state, id),
+    isNewChat: id ? false : state.isNewChat,
+  })),
+
+  startNewChat: (projectId) => {
+    if (projectId) {
+      useWorkspaceStore.getState().setActiveProject(projectId);
+    }
+    set({ isNewChat: true, activeSessionId: null });
+  },
+
+  cancelNewChat: () => {
+    set({ isNewChat: false });
+  },
 
   addMessage: (sessionId, message) => {
     set((state) => ({

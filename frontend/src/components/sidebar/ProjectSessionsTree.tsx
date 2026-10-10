@@ -1,8 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useWorkspaceStore } from '../../stores/workspace';
 import { normalizeWorkDir, sessionBelongsToWorkDir, useChatStore } from '../../stores/chat';
-import { createChatSession, deleteChatSession } from '../../api';
-import type { ChatSessionInfo } from '../../types';
+import { deleteChatSession } from '../../api';
 
 const agentLabels: Record<string, string> = {
   antigravity: 'Google Antigravity',
@@ -72,16 +71,6 @@ export function ProjectSessionsTree() {
   const loadHistory = useChatStore((s) => s.loadHistory);
   const loadHistorySession = useChatStore((s) => s.loadHistorySession);
   const deleteHistorySession = useChatStore((s) => s.deleteHistorySession);
-  const agents = useChatStore((s) => s.agents);
-  const selectedAgentId = useChatStore((s) => s.selectedAgentId);
-  const setSelectedAgent = useChatStore((s) => s.setSelectedAgent);
-  const createSessionStore = useChatStore((s) => s.createSession);
-  const useActiveTerminal = useChatStore((s) => s.useActiveTerminal);
-  const activeTerminalId = useChatStore((s) => s.activeTerminalId);
-  const useActiveBrowser = useChatStore((s) => s.useActiveBrowser);
-  const browserSelection = useChatStore((s) => s.browserSelection);
-  const browserSelectionMode = useChatStore((s) => s.browserSelectionMode);
-  const browserSelectionCapture = useChatStore((s) => s.browserSelectionCapture);
 
   const [collapsedProjects, setCollapsedProjects] = useState<Record<string, boolean>>({});
   const [loadingSessionId, setLoadingSessionId] = useState<string | null>(null);
@@ -97,49 +86,11 @@ export function ProjectSessionsTree() {
     setCollapsedProjects((prev) => ({ ...prev, [projectId]: !prev[projectId] }));
   };
 
-  const handleStartChat = async (projectId: string, projectPath: string, e?: React.MouseEvent) => {
+  const startNewChat = useChatStore((s) => s.startNewChat);
+
+  const handleStartChat = (projectId: string, _projectPath: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const available = agents.filter((a) => a.available);
-    const agentId = selectedAgentId && agents.some((a) => a.id === selectedAgentId && a.available)
-      ? selectedAgentId
-      : (available[0]?.id ?? 'antigravity');
-
-    const agent = agents.find((a) => a.id === agentId);
-    if (!agent) return;
-
-    setActiveProject(projectId);
-    setSelectedAgent(agentId);
-
-    try {
-      const terminalEnabled = useActiveTerminal && !!activeTerminalId;
-      const project = projects.find((p) => p.id === projectId);
-      const browserTabId = project?.activeBrowserTabId ?? null;
-      const browserEnabled = useActiveBrowser && !!browserTabId;
-
-      const created = await createChatSession(agentId, projectPath, terminalEnabled, terminalEnabled ? activeTerminalId : undefined, browserEnabled, browserTabId);
-      const newSession: ChatSessionInfo = {
-        id: created.id,
-        recordId: created.resumedFrom ?? created.id,
-        agentId,
-        title: agent.label ?? 'Chat',
-        messages: [],
-        status: 'idle',
-        createdAt: Date.now(),
-        kind: 'live',
-        workDir: created.workDir ?? projectPath,
-        acpSessionId: created.acpSessionId,
-        useActiveTerminal: terminalEnabled,
-        terminalId: terminalEnabled ? activeTerminalId : undefined,
-        useActiveBrowser: browserEnabled,
-        browserSelection: browserEnabled ? browserSelection : null,
-        browserSelectionMode,
-        browserSelectionCapture: browserEnabled ? browserSelectionCapture : null,
-      };
-      createSessionStore(newSession);
-      setActiveSession(newSession.id);
-    } catch (err) {
-      console.error('Failed to create new session in project:', err);
-    }
+    startNewChat(projectId);
   };
 
   const handleSelectSession = (projectId: string, sessionId: string) => {
