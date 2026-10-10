@@ -1,9 +1,10 @@
 import { createPortal } from 'react-dom';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { sessionBelongsToWorkDir, useChatStore } from '../../stores/chat';
 import { useWorkspaceStore } from '../../stores/workspace';
 import type { ConfigOptionInfo } from '../../types';
 import { ModelDropdown } from './ModelDropdown';
+import { cleanOptionName, hasModelEfforts, splitModelAndEffort, type EffortLevel } from './modelEffort';
 
 export function AgentPicker() {
   const agents = useChatStore((s) => s.agents);
@@ -183,6 +184,12 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
     void setTerminalEnabled(enabled);
   };
 
+  const modelOpt = configOptions.find((opt) => isModelOption(opt));
+  const effortSplitting = useMemo(() => {
+    if (!modelOpt || !hasModelEfforts(modelOpt)) return null;
+    return splitModelAndEffort(modelOpt);
+  }, [modelOpt]);
+
   return (
     <div className="chat-config-bar">
       {busyLabel && (
@@ -191,18 +198,52 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
           <span className="chat-config-status-label">{busyLabel}</span>
         </div>
       )}
-      {configOptions.map((opt) => (
-        isModelOption(opt) ? (
-          <ModelDropdown
-            key={opt.id}
-            option={opt}
-            isOpen={!hasActiveSession ? false : openDropdown === opt.id}
-            onToggle={() => hasActiveSession && setOpenDropdown(openDropdown === opt.id ? null : opt.id)}
-            onClose={() => setOpenDropdown(null)}
-            onChange={(value) => handleChange(opt.id, value)}
-            disabled={!hasActiveSession || busy}
-          />
-        ) : (
+      {configOptions.map((opt) => {
+        if (isModelOption(opt)) {
+          if (effortSplitting) {
+            return (
+              <Fragment key={opt.id}>
+                <ModelDropdown
+                  key={opt.id}
+                  option={effortSplitting.baseModelOption}
+                  isOpen={!hasActiveSession ? false : openDropdown === opt.id}
+                  onToggle={() => hasActiveSession && setOpenDropdown(openDropdown === opt.id ? null : opt.id)}
+                  onClose={() => setOpenDropdown(null)}
+                  onChange={(baseName) => {
+                    const fullVal = effortSplitting.resolveModelValue(baseName, effortSplitting.currentEffort);
+                    handleChange(opt.id, fullVal);
+                  }}
+                  disabled={!hasActiveSession || busy}
+                />
+                <ConfigDropdown
+                  key={`${opt.id}_effort`}
+                  option={effortSplitting.effortOption}
+                  variant="compact"
+                  isOpen={!hasActiveSession ? false : openDropdown === `${opt.id}_effort`}
+                  onToggle={() => hasActiveSession && setOpenDropdown(openDropdown === `${opt.id}_effort` ? null : `${opt.id}_effort`)}
+                  onClose={() => setOpenDropdown(null)}
+                  onChange={(newEffort) => {
+                    const fullVal = effortSplitting.resolveModelValue(effortSplitting.currentBaseModel, newEffort as EffortLevel);
+                    handleChange(opt.id, fullVal);
+                  }}
+                  disabled={!hasActiveSession || busy}
+                />
+              </Fragment>
+            );
+          }
+          return (
+            <ModelDropdown
+              key={opt.id}
+              option={opt}
+              isOpen={!hasActiveSession ? false : openDropdown === opt.id}
+              onToggle={() => hasActiveSession && setOpenDropdown(openDropdown === opt.id ? null : opt.id)}
+              onClose={() => setOpenDropdown(null)}
+              onChange={(value) => handleChange(opt.id, value)}
+              disabled={!hasActiveSession || busy}
+            />
+          );
+        }
+        return (
           <ConfigDropdown
             key={opt.id}
             option={opt}
@@ -213,8 +254,8 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
             onChange={(value) => handleChange(opt.id, value)}
             disabled={!hasActiveSession || busy}
           />
-        )
-      ))}
+        );
+      })}
       <label
         className={`chat-config-toggle${autoApprove ? ' active' : ''}`}
         title="Auto-approve all tool permissions (yolo mode)"
@@ -292,7 +333,9 @@ function ConfigDropdown({ option, variant, isOpen, onToggle, onClose, onChange, 
   disabled?: boolean;
 }) {
   const currentOption = option.options.find((o) => o.value === option.currentValue);
-  const label = currentOption?.name ?? option.currentValue;
+  const rawLabel = currentOption?.name ?? option.currentValue;
+  const label = cleanOptionName(rawLabel, option.id);
+  const displayLabel = option.id === 'model_effort' ? `Effort: ${label}` : label;
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const [overlayStyle, setOverlayStyle] = useState<Record<string, string>>({});
@@ -382,7 +425,7 @@ function ConfigDropdown({ option, variant, isOpen, onToggle, onClose, onChange, 
           onClick={() => onChange(val.value)}
           type="button"
         >
-          {val.name}
+          {cleanOptionName(val.name, option.id)}
         </button>
       ))}
     </div>,
@@ -400,7 +443,7 @@ function ConfigDropdown({ option, variant, isOpen, onToggle, onClose, onChange, 
         title={option.name}
         disabled={disabled}
       >
-        <span className={`agent-picker-label ${variant === 'rich' ? 'agent-picker-label-multiline' : 'agent-picker-label-compact'}`}>{label}</span>
+        <span className={`agent-picker-label ${variant === 'rich' ? 'agent-picker-label-multiline' : 'agent-picker-label-compact'}`}>{displayLabel}</span>
         <span className="agent-picker-caret" aria-hidden="true">▾</span>
       </button>
       {isOpen ? dropdown : null}

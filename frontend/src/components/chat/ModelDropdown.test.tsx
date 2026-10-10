@@ -8,16 +8,10 @@ import type { ConfigOptionInfo } from '../../types';
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 describe('getModelBadge', () => {
-  it('detects usage credits badge for fable or credit descriptions', () => {
+  it('does not show usage credits badge for fable or credit descriptions', () => {
     expect(getModelBadge({ value: 'claude-3-5-sonnet', name: 'Sonnet 3.5' })).toBeNull();
-    expect(getModelBadge({ value: 'claude-fable-5-1', name: 'Fable 5.1' })).toEqual({
-      text: 'Requires usage credits',
-      icon: 'ⓘ',
-    });
-    expect(getModelBadge({ value: 'custom-model', name: 'Custom', description: 'Requires usage credits to run' })).toEqual({
-      text: 'Requires usage credits',
-      icon: 'ⓘ',
-    });
+    expect(getModelBadge({ value: 'claude-fable-5-1', name: 'Fable 5.1' })).toBeNull();
+    expect(getModelBadge({ value: 'custom-model', name: 'Custom', description: 'Requires usage credits to run' })).toBeNull();
   });
 
   it('detects reasoning badge', () => {
@@ -105,8 +99,8 @@ describe('ModelDropdown', () => {
     expect(menu?.textContent).toContain('Fable 5.1');
     expect(menu?.textContent).toContain('Haiku 5.5');
 
-    // Fable badge
-    expect(menu?.textContent).toContain('Requires usage credits');
+    // Fable badge - usage credit label removed
+    expect(menu?.textContent).not.toContain('Requires usage credits');
 
     // Shortcuts: 1 for Opus 5.5, 3 for Fable 5.1, 4 for Haiku 5.5
     expect(menu?.textContent).toContain('1');

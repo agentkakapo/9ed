@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ConfigOptionInfo, ConfigValueInfo } from '../../types';
+import { cleanOptionName } from './modelEffort';
 
 export type ModelDropdownProps = {
   option: ConfigOptionInfo;
@@ -16,17 +17,6 @@ export function getModelBadge(item: ConfigValueInfo): { text: string; icon?: str
   const name = item.name.toLowerCase();
   const val = item.value.toLowerCase();
 
-  // Usage credits badge
-  if (
-    desc.includes('usage credit') ||
-    desc.includes('requires usage credit') ||
-    desc.includes('credit') ||
-    name.includes('fable') ||
-    val.includes('fable')
-  ) {
-    return { text: 'Requires usage credits', icon: 'ⓘ' };
-  }
-
   // Reasoning badge
   if (
     desc.includes('reasoning') ||
@@ -35,10 +25,6 @@ export function getModelBadge(item: ConfigValueInfo): { text: string; icon?: str
     val.includes('reasoning')
   ) {
     return { text: 'Reasoning' };
-  }
-
-  if (item.description && item.description.length <= 16 && !item.description.includes('.')) {
-    return { text: item.description };
   }
 
   return null;
@@ -53,7 +39,8 @@ export function ModelDropdown({
   disabled,
 }: ModelDropdownProps) {
   const currentOption = option.options.find((o) => o.value === option.currentValue);
-  const label = currentOption?.name ?? option.currentValue ?? 'Select model';
+  const rawLabel = currentOption?.name ?? option.currentValue ?? 'Select model';
+  const label = cleanOptionName(rawLabel, option.id);
 
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const mainMenuRef = useRef<HTMLDivElement | null>(null);
@@ -280,7 +267,7 @@ export function ModelDropdown({
                 role="menuitem"
               >
                 <div className="model-menu-item-left">
-                  <span className="model-menu-item-name">{item.name}</span>
+                  <span className="model-menu-item-name">{cleanOptionName(item.name, option.id)}</span>
                   {badge && (
                     <span className="model-badge">
                       {badge.icon && <span className="model-badge-icon">{badge.icon}</span>}
@@ -360,7 +347,7 @@ export function ModelDropdown({
                 role="menuitem"
               >
                 <div className="model-menu-item-left">
-                  <span className="model-menu-item-name">{item.name}</span>
+                  <span className="model-menu-item-name">{cleanOptionName(item.name, option.id)}</span>
                   {badge && (
                     <span className="model-badge">
                       {badge.icon && <span className="model-badge-icon">{badge.icon}</span>}
