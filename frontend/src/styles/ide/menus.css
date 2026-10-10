@@ -119,3 +119,126 @@
   background: var(--border-color);
   margin: 4px 0;
 }
+
+/* ── Quick Open Modal ── */
+.quickopen-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 210;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 10vh;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.quickopen-modal {
+  background: #111422;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 620px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+}
+
+.quickopen-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.quickopen-icon {
+  font-size: 0.95rem;
+  opacity: 0.7;
+}
+
+.quickopen-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f8fafc;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.quickopen-spinner {
+  font-size: 0.85rem;
+  color: var(--accent-cyan);
+}
+
+.quickopen-list {
+  overflow-y: auto;
+  max-height: 55vh;
+  padding: 6px;
+}
+
+.quickopen-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  gap: 2px;
+  transition: background 0.1s ease;
+}
+
+.quickopen-item:hover,
+.quickopen-item.active {
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.quickopen-item-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quickopen-item-name {
+  color: #f8fafc;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.quickopen-item-path {
+  color: var(--sidebar-fg-muted);
+  font-size: 0.75rem;
+  font-family: var(--font-mono, monospace);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quickopen-badge {
+  font-size: 0.68rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+}
+
+.quickopen-item-preview {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-family: var(--font-mono, monospace);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quickopen-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--sidebar-fg-muted);
+  font-size: 0.85rem;
+}

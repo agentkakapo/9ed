@@ -196,6 +196,8 @@ export function EditorArea() {
             value={activeFile.content}
             language={activeFile.language}
             filePath={activeFile.path}
+            initialLine={activeFile.cursorLine}
+            initialColumn={activeFile.cursorColumn}
             onChange={handleContentChange}
             onSave={handleSave}
             gutterChanges={gutterChanges}

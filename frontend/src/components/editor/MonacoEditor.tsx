@@ -12,6 +12,8 @@ type MonacoEditorProps = {
   value: string;
   language: string;
   filePath?: string;
+  initialLine?: number;
+  initialColumn?: number;
   onChange: (value: string) => void;
   onSave: () => void;
   gutterChanges?: GutterChange[];
@@ -33,7 +35,17 @@ function gutterDecorations(changes: GutterChange[]): editor.IModelDeltaDecoratio
   }));
 }
 
-export function MonacoEditor({ value, language, filePath, onChange, onSave, gutterChanges, onSelectionChange }: MonacoEditorProps) {
+export function MonacoEditor({
+  value,
+  language,
+  filePath,
+  initialLine,
+  initialColumn,
+  onChange,
+  onSave,
+  gutterChanges,
+  onSelectionChange,
+}: MonacoEditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const decorationsRef = useRef<editor.IEditorDecorationsCollection | null>(null);
   const selectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -103,7 +115,21 @@ export function MonacoEditor({ value, language, filePath, onChange, onSave, gutt
     editorInstance.onDidBlurEditorWidget(() => {
       if (onSelectionChange) onSelectionChange(null);
     });
+
+    if (initialLine && initialLine > 0) {
+      editorInstance.revealLineInCenter(initialLine);
+      editorInstance.setPosition({ lineNumber: initialLine, column: initialColumn ?? 1 });
+      editorInstance.focus();
+    }
   };
+
+  useEffect(() => {
+    if (editorRef.current && initialLine && initialLine > 0) {
+      editorRef.current.revealLineInCenter(initialLine);
+      editorRef.current.setPosition({ lineNumber: initialLine, column: initialColumn ?? 1 });
+      editorRef.current.focus();
+    }
+  }, [initialLine, initialColumn]);
 
   useEffect(() => {
     if (!editorRef.current || !gutterChanges) return;

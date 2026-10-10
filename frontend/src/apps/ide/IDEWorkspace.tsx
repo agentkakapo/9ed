@@ -18,6 +18,7 @@ import { BrowserPanel } from '../../components/browser/BrowserPanel';
 import { SettingsPanel } from '../../components/settings/SettingsPanel';
 import { BottomNav, type MobileView } from '../../components/shared/BottomNav';
 import { ShortcutsHelp } from '../../components/shared/ShortcutsHelp';
+import { QuickOpenModal } from '../../components/shared/QuickOpenModal';
 import { getFileContent } from '../../api';
 import type { FileTab } from '../../types';
 
@@ -156,6 +157,7 @@ export function IDEWorkspace() {
 
   // Right sidebar starts collapsed as requested
   const [activeRightPane, setActiveRightPane] = useState<RightPaneType>(null);
+  const [showQuickOpen, setShowQuickOpen] = useState(false);
 
   const activeProject = useMemo(() => projects.find((p) => p.id === activeProjectId) ?? null, [projects, activeProjectId]);
 
@@ -240,7 +242,7 @@ export function IDEWorkspace() {
   });
 
   // When a file is selected, open file and reveal right drawer editor
-  const handleFileSelect = useCallback(async (filePath: string, fileName: string) => {
+  const handleFileSelect = useCallback(async (filePath: string, fileName: string, line?: number, col?: number) => {
     if (!activeProjectId) return;
     try {
       const fc = await getFileContent(filePath);
@@ -251,6 +253,8 @@ export function IDEWorkspace() {
         content: fc.content,
         language: languageFromPath(filePath),
         modified: false,
+        cursorLine: line,
+        cursorColumn: col,
       };
       openFile(activeProjectId, tab);
       setActiveRightPane('editor');
@@ -311,6 +315,15 @@ export function IDEWorkspace() {
         e.preventDefault();
         toggleRightPane('browser');
       }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+        e.preventDefault();
+        setShowQuickOpen((v) => !v);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
+        e.preventDefault();
+        setActivePanel('search');
+        if (!sidebarVisible) toggleSidebar();
+      }
       if (e.key === 'F1') {
         e.preventDefault();
         setShowHelp((v) => !v);
@@ -318,7 +331,7 @@ export function IDEWorkspace() {
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSidebar]);
+  }, [toggleSidebar, setActivePanel, sidebarVisible]);
 
   useEffect(() => {
     if (mobileView !== 'editor' || !pendingDiffRef.current) return;
@@ -448,8 +461,12 @@ export function IDEWorkspace() {
             {activePanel === 'explorer' && activeProject && (
               <FileTree rootPath={activeProject.path} onFileSelect={handleFileSelect} refreshKey={treeRefreshKey} />
             )}
-            {activePanel === 'search' && activeProject && (
-              <SearchPanel rootPath={activeProject.path} onResultClick={handleFileSelect} />
+            {activePanel === 'search' && (
+              activeProject ? (
+                <SearchPanel rootPath={activeProject.path} onResultClick={handleFileSelect} />
+              ) : (
+                <p className="search-empty">No project opened. Select or open a folder to search files.</p>
+              )
             )}
             {activePanel === 'git' && activeProject && (
               <GitPanel projectPath={activeProject.path} onOpenDiff={handleOpenDiff} />
@@ -601,6 +618,14 @@ export function IDEWorkspace() {
         if (view === 'git') setActivePanel('git');
         if (view === 'settings') setActivePanel('settings');
       }} />
+      {showQuickOpen && activeProject && (
+        <QuickOpenModal
+          rootPath={activeProject.path}
+          openFiles={activeProject.openFiles}
+          onSelectFile={handleFileSelect}
+          onClose={() => setShowQuickOpen(false)}
+        />
+      )}
       {helpOverlay}
     </div>
   );

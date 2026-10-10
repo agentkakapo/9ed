@@ -14,9 +14,16 @@
   background: rgba(255, 255, 255, 0.01);
 }
 
-.search-input {
+.search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
   flex: 1;
-  padding: 6px 12px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 6px 72px 6px 10px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: #090a10;
@@ -31,6 +38,64 @@
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
 }
 
+.search-options {
+  position: absolute;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.search-option-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--sidebar-fg-muted);
+  font-size: 0.72rem;
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.search-option-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+}
+
+.search-option-btn.active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: rgba(56, 189, 248, 0.5);
+  color: var(--accent-cyan);
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--sidebar-fg-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.search-clear-btn:hover {
+  color: #f1f5f9;
+}
+
 .search-btn {
   padding: 6px 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -43,9 +108,29 @@
   transition: all 0.15s ease;
 }
 
-.search-btn:hover {
+.search-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.2);
+}
+
+.search-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.search-status-bar {
+  padding: 5px 12px;
+  font-size: 0.72rem;
+  color: var(--sidebar-fg-muted);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.search-error-banner {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .search-results {

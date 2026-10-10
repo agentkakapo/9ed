@@ -268,10 +268,23 @@ export async function moveEntry(sourcePath: string, destPath: string): Promise<v
   }
 }
 
-export async function searchFiles(root: string, query: string, regex: boolean, maxResults: number): Promise<SearchResult[]> {
-  const params = new URLSearchParams({ root, query, regex: String(regex), maxResults: String(maxResults) });
+export async function searchFiles(
+  root: string,
+  query: string,
+  regex = false,
+  maxResults = 100,
+  caseSensitive = false,
+): Promise<SearchResult[]> {
+  const params = new URLSearchParams({
+    root,
+    query,
+    regex: String(regex),
+    caseSensitive: String(caseSensitive),
+    maxResults: String(maxResults),
+  });
   const response = await fetch(`/api/files/search?${params}`, { credentials: 'include' });
-  return parseResponse<SearchResult[]>(response);
+  const data = await parseResponse<SearchResult[]>(response);
+  return Array.isArray(data) ? data : [];
 }
 
 export function downloadFile(path: string): void {

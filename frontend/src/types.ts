@@ -62,6 +62,8 @@ export type FileTab = {
   modified: boolean;
   conflict?: boolean;
   deleted?: boolean;
+  cursorLine?: number;
+  cursorColumn?: number;
 };
 
 export type Project = {

@@ -4,6 +4,8 @@ type ShortcutsHelpProps = {
 
 const shortcuts = [
   { group: 'General', items: [
+    { key: 'Ctrl+P', action: 'Quick open file' },
+    { key: 'Ctrl+Shift+F', action: 'Search files' },
     { key: 'Ctrl+B', action: 'Toggle sidebar' },
     { key: 'Ctrl+`', action: 'Toggle terminal' },
     { key: 'Ctrl+Shift+G', action: 'Open git panel' },

@@ -341,6 +341,7 @@ func (a *API) handleFileSearch(w http.ResponseWriter, r *http.Request) {
 	root := r.URL.Query().Get("root")
 	query := r.URL.Query().Get("query")
 	regexStr := r.URL.Query().Get("regex")
+	caseSensitiveStr := r.URL.Query().Get("caseSensitive")
 	maxStr := r.URL.Query().Get("maxResults")
 
 	if root == "" || query == "" {
@@ -354,6 +355,7 @@ func (a *API) handleFileSearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	useRegex := regexStr == "true"
+	caseSensitive := caseSensitiveStr == "true"
 	maxResults := 100
 	if maxStr != "" {
 		if parsed, err := strconv.Atoi(maxStr); err == nil && parsed > 0 {
@@ -361,9 +363,14 @@ func (a *API) handleFileSearch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	results, err := filesystem.Search(validated, query, useRegex, maxResults)
+	results, err := filesystem.SearchWithOptions(validated, filesystem.SearchOptions{
+		Query:         query,
+		UseRegex:      useRegex,
+		CaseSensitive: caseSensitive,
+		MaxResults:    maxResults,
+	})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 

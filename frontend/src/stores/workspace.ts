@@ -322,7 +322,19 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       projects: updateProject(state.projects, projectId, (p) => {
         const exists = p.openFiles.find((f) => f.path === file.path);
         if (exists) {
-          return { ...p, activeFileId: exists.id };
+          return {
+            ...p,
+            openFiles: p.openFiles.map((f) =>
+              f.id === exists.id
+                ? {
+                    ...f,
+                    cursorLine: file.cursorLine !== undefined ? file.cursorLine : f.cursorLine,
+                    cursorColumn: file.cursorColumn !== undefined ? file.cursorColumn : f.cursorColumn,
+                  }
+                : f
+            ),
+            activeFileId: exists.id,
+          };
         }
         return { ...p, openFiles: [...p.openFiles, file], activeFileId: file.id };
       }),
