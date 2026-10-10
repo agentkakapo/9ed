@@ -128,12 +128,17 @@ function readStoredActiveProject(): StoredActiveProject | null {
 }
 
 function normalizeStoredProject(project: Partial<StoredProject>): StoredProject | null {
-  if (!project.path || !project.name) return null;
+  if (!project.path) return null;
+  const path = project.path.trim();
+  if (!path) return null;
+  const rawName = project.name?.trim();
+  const fallbackName = path.split(/[/\\]/).filter(Boolean).pop() || 'Workspace';
+  const name = rawName || fallbackName;
   const browserTabs = normalizeBrowserTabs(project.browserTabIds, project.activeBrowserTabId);
   return {
     id: project.id || generateId(),
-    path: project.path,
-    name: project.name,
+    path,
+    name,
     browserTabIds: browserTabs.browserTabIds,
     activeBrowserTabId: browserTabs.activeBrowserTabId,
   };
@@ -232,10 +237,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   showPicker: false,
 
   addProject: (path, name) => {
-    void saveRecentProject(path, name);
+    if (!path || !path.trim()) return;
+    const cleanPath = path.trim();
+    const fallbackName = cleanPath.split(/[/\\]/).filter(Boolean).pop() || 'Workspace';
+    const cleanName = (name && name.trim()) ? name.trim() : fallbackName;
+    void saveRecentProject(cleanPath, cleanName);
     set((state) => ({
       ...(() => {
-        const existing = state.projects.find((p) => p.path === path);
+        const existing = state.projects.find((p) => p.path === cleanPath);
         if (existing) {
           writeStoredWorkspace(state.projects, existing.id);
           return {
@@ -244,7 +253,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
           };
         }
         const id = generateId();
-        const project = emptyProject({ id, path, name });
+        const project = emptyProject({ id, path: cleanPath, name: cleanName });
         const projects = [...state.projects, project];
         writeStoredWorkspace(projects, id);
         return {

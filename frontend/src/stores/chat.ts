@@ -1167,6 +1167,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   restoreSessionForProject: async (projectPath, preferredSessionId) => {
     if (!projectPath) return;
+    if (get().isNewChat) return;
 
     set({ restoring: true, lastRestoreError: null });
     try {

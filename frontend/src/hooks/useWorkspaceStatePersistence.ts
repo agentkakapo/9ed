@@ -160,6 +160,11 @@ export async function restoreWorkspaceState(projectPath: string, projectId: stri
     }
 
     const chatStore = useChatStore.getState();
+    if (chatStore.isNewChat) {
+      // Do not restore or resume previous chat session when user is in New Chat wizard
+      return;
+    }
+
     if (!chatStore.historyLoaded || chatStore.historyWorkDir !== projectPath) {
       await chatStore.loadHistory(projectPath).catch(() => undefined);
     }

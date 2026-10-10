@@ -3,30 +3,67 @@ import { getConfig, getDrives, getFileTree, getRecentProjects, removeRecentProje
 import { useWorkspaceStore } from '../../stores/workspace';
 import type { DirEntry } from '../../types';
 
-type TreeNode = DirEntry & { children?: TreeNode[]; expanded?: boolean; fullPath: string };
+function FolderIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+      <path d="M1.5 3.5 a1 1 0 0 1 1 -1 h3 l1.5 1.5 h5.5 a1 1 0 0 1 1 1 v8 a1 1 0 0 1 -1 1 h-10 a1 1 0 0 1 -1 -1z" fill="#38bdf8" opacity="0.3" stroke="#38bdf8" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
+function UpIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="12" y1="19" x2="12" y2="5" />
+      <polyline points="5 12 12 5 19 12" />
+    </svg>
+  );
+}
+
+function joinPath(base: string, name: string): string {
+  const isWindows = base.includes('\\');
+  const sep = isWindows ? '\\' : '/';
+  if (base.endsWith(sep)) {
+    return base + name;
+  }
+  return base + sep + name;
+}
+
+function getParentPath(dirPath: string): string {
+  const isWindows = dirPath.includes('\\');
+  const sep = isWindows ? '\\' : '/';
+  const trimmed = dirPath.replace(/[/\\]+$/, '');
+  const lastIndex = isWindows ? trimmed.lastIndexOf('\\') : trimmed.lastIndexOf('/');
+  if (lastIndex <= 0) {
+    return isWindows ? (trimmed.slice(0, 3) || 'C:\\') : '/';
+  }
+  return trimmed.slice(0, lastIndex) || sep;
+}
 
 export function ProjectPicker() {
   const addProject = useWorkspaceStore((s) => s.addProject);
   const projects = useWorkspaceStore((s) => s.projects);
-  const setActiveProject = useWorkspaceStore((s) => s.setActiveProject);
   const setShowPicker = useWorkspaceStore((s) => s.setShowPicker);
 
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const [drives, setDrives] = useState<string[]>([]);
   const [rootPath, setRootPath] = useState('');
-  const [nodes, setNodes] = useState<TreeNode[]>([]);
+  const [pathInput, setPathInput] = useState('');
+  const [entries, setEntries] = useState<DirEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const canClose = projects.length > 0;
+
   useEffect(() => {
-    document.title = '9ed - Home';
+    document.title = '9ed - Open Folder';
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     void getRecentProjects()
-      .then((projects) => {
-        if (!cancelled) setRecentProjects(projects);
+      .then((recents) => {
+        if (!cancelled) setRecentProjects(recents);
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load recent projects');
@@ -38,17 +75,16 @@ export function ProjectPicker() {
     setLoading(true);
     setError(null);
     setRootPath(path);
+    setPathInput(path);
     try {
-      const entries = await getFileTree(path);
-      setNodes(
-        entries
-          .filter((e) => e.type === 'dir')
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .map((e) => ({ ...e, fullPath: joinPath(path, e.name) })),
-      );
+      const items = await getFileTree(path);
+      const dirs = items
+        .filter((e) => e.type === 'dir')
+        .sort((a, b) => a.name.localeCompare(b.name));
+      setEntries(dirs);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load');
-      setNodes([]);
+      setError(err instanceof Error ? err.message : 'Failed to access directory');
+      setEntries([]);
     } finally {
       setLoading(false);
     }
@@ -60,7 +96,6 @@ export function ProjectPicker() {
       try {
         const config = await getConfig();
         if (cancelled) return;
-
         const root = config.workspaceRoot || '/';
         await loadTree(root);
       } catch (err) {
@@ -83,134 +118,110 @@ export function ProjectPicker() {
     return () => { cancelled = true; };
   }, [loadTree]);
 
-  const handleDriveChange = useCallback((drive: string) => {
-    void loadTree(drive);
-  }, [loadTree]);
-
-  const toggleExpand = useCallback(async (node: TreeNode, path: number[]) => {
-    if (node.expanded) {
-      setNodes((prev) => updateNodeAtPath(prev, path, { ...node, expanded: false }));
-      return;
-    }
-
-    try {
-      const entries = await getFileTree(node.fullPath);
-      const children = entries
-        .filter((e) => e.type === 'dir')
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((e) => ({ ...e, fullPath: joinPath(node.fullPath, e.name) }));
-      setNodes((prev) => updateNodeAtPath(prev, path, { ...node, expanded: true, children }));
-    } catch {
-      setNodes((prev) => updateNodeAtPath(prev, path, { ...node, expanded: true, children: [] }));
-    }
-  }, []);
-
-  const handleOpen = useCallback((node: TreeNode) => {
-    addProject(node.fullPath, node.name);
-  }, [addProject]);
-
-  const handleSelectExisting = useCallback((projectId: string) => {
-    setActiveProject(projectId);
+  const handleSelectFolder = (folderPath: string, folderName?: string) => {
+    const cleanPath = folderPath.trim();
+    if (!cleanPath) return;
+    const name = folderName?.trim() || cleanPath.split(/[/\\]/).filter(Boolean).pop() || 'Workspace';
+    addProject(cleanPath, name);
     setShowPicker(false);
-  }, [setActiveProject, setShowPicker]);
+  };
+
+  const handleGoUp = () => {
+    if (!rootPath) return;
+    const parent = getParentPath(rootPath);
+    if (parent !== rootPath) {
+      void loadTree(parent);
+    }
+  };
+
+  const handlePathSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pathInput.trim()) {
+      void loadTree(pathInput.trim());
+    }
+  };
+
+  const currentFolderName = rootPath.split(/[/\\]/).filter(Boolean).pop() || rootPath || 'Folder';
 
   return (
-    <main className="picker-shell" onClick={() => projects.length > 0 && setShowPicker(false)}>
-      <div className="picker-card" onClick={(e) => e.stopPropagation()}>
-        <header className="picker-header">
-          <div className="picker-header-title-wrap">
-            <h2 className="picker-modal-title">Open Project / Repo</h2>
-            <span className="picker-modal-desc">Select a folder to add to workspace</span>
+    <div
+      className="picker-shell folder-picker-overlay"
+      onClick={() => canClose && setShowPicker(false)}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="folder-picker-title"
+    >
+      <div className="picker-card folder-picker-modal" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="picker-header folder-picker-header">
+          <div className="folder-picker-title-wrap">
+            <h2 id="folder-picker-title" className="picker-modal-title folder-picker-title">
+              Open Folder / Repository
+            </h2>
+            <span className="picker-modal-desc folder-picker-desc">
+              Select a project folder on your system to work with
+            </span>
           </div>
-          {projects.length > 0 && (
+          {canClose && (
             <button
               type="button"
-              className="picker-close-btn"
+              className="picker-close-btn folder-picker-close-btn"
               onClick={() => setShowPicker(false)}
-              title="Close"
+              title="Close (Esc)"
               aria-label="Close"
             >
-              ×
+              ✕
             </button>
           )}
-        </header>
+        </div>
 
+        {/* Recent Projects (compact chips) */}
         {recentProjects.length > 0 && (
-          <div className="picker-section">
-            <h2 className="picker-section-title">Recent Projects</h2>
-            <div className="picker-projects">
+          <div className="folder-picker-recents">
+            <span className="folder-picker-section-label">Recent</span>
+            <div className="folder-picker-recents-list">
               {recentProjects.map((rp) => (
-                <div key={rp.path} className="picker-project-row">
+                <div key={rp.path} className="folder-picker-recent-chip">
                   <button
-                    className="picker-project-btn"
-                    onClick={() => addProject(rp.path, rp.name)}
                     type="button"
+                    className="folder-picker-recent-btn"
+                    onClick={() => handleSelectFolder(rp.path, rp.name)}
+                    title={rp.path}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-                        <path d="M1.5 3.5 a1 1 0 0 1 1 -1 h3 l1.5 1.5 h5.5 a1 1 0 0 1 1 1 v8 a1 1 0 0 1 -1 1 h-10 a1 1 0 0 1 -1 -1z" fill="#6366f1" opacity="0.4" stroke="#818cf8" strokeWidth="1.2" />
-                      </svg>
-                      <span className="picker-project-name">{rp.name}</span>
-                    </div>
-                    <span className="picker-project-path">{rp.path}</span>
+                    <FolderIcon />
+                    <span className="folder-picker-recent-name">{rp.name}</span>
                   </button>
                   <button
-                    className="picker-project-remove"
+                    type="button"
+                    className="folder-picker-recent-remove"
                     onClick={(e) => {
                       e.stopPropagation();
                       void removeRecentProject(rp.path).then(() => {
                         setRecentProjects((prev) => prev.filter((p) => p.path !== rp.path));
                       });
                     }}
-                    type="button"
                     title="Remove from recent"
+                    aria-label={`Remove ${rp.name} from recent`}
                   >
                     ×
                   </button>
                 </div>
               ))}
             </div>
-            <div className="picker-divider" />
           </div>
         )}
 
-        {projects.length > 0 && (
-          <div className="picker-section">
-            <h2 className="picker-section-title">Open Repositories</h2>
-            <div className="picker-projects">
-              {projects.map((p) => (
-                <button
-                  key={p.id}
-                  className="picker-project-btn"
-                  onClick={() => handleSelectExisting(p.id)}
-                  type="button"
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-                      <path d="M1.5 3.5 a1 1 0 0 1 1 -1 h3 l1.5 1.5 h5.5 a1 1 0 0 1 1 1 v8 a1 1 0 0 1 -1 1 h-10 a1 1 0 0 1 -1 -1z" fill="#38bdf8" opacity="0.4" stroke="#38bdf8" strokeWidth="1.2" />
-                    </svg>
-                    <span className="picker-project-name">{p.name}</span>
-                  </div>
-                  <span className="picker-project-path">{p.path}</span>
-                </button>
-              ))}
-            </div>
-            <div className="picker-divider" />
-          </div>
-        )}
-
-        <h3 className="picker-section-title">Browse Directories</h3>
-
+        {/* Drives selector (Windows / multi-mount) */}
         {drives.length > 1 && (
-          <div className="drive-picker">
-            <label className="drive-label">Drive</label>
+          <div className="drive-picker folder-picker-drives">
+            <span className="drive-label">Drives</span>
             <div className="drive-list">
               {drives.map((drive) => (
                 <button
                   key={drive}
-                  className={`drive-btn${drive === rootPath ? ' active' : ''}`}
-                  onClick={() => handleDriveChange(drive)}
                   type="button"
+                  className={`drive-btn${drive === rootPath ? ' active' : ''}`}
+                  onClick={() => void loadTree(drive)}
                 >
                   {drive}
                 </button>
@@ -219,67 +230,94 @@ export function ProjectPicker() {
           </div>
         )}
 
-        <p className="picker-root">Browsing: {rootPath}</p>
+        {/* Path Navigation Bar */}
+        <form className="folder-picker-path-bar" onSubmit={handlePathSubmit}>
+          <button
+            type="button"
+            className="folder-picker-up-btn"
+            onClick={handleGoUp}
+            title="Go up to parent directory"
+            aria-label="Up"
+          >
+            <UpIcon />
+          </button>
+          <input
+            type="text"
+            className="folder-picker-path-input"
+            value={pathInput}
+            onChange={(e) => setPathInput(e.target.value)}
+            placeholder="/path/to/folder"
+            aria-label="Current path"
+            spellCheck={false}
+          />
+          <button type="submit" className="folder-picker-go-btn">
+            Go
+          </button>
+        </form>
 
-        {error && <div className="status-banner error">{error}</div>}
-        {loading && <div className="status-banner">Loading directories…</div>}
+        {/* Status / Error Banner */}
+        {error && <div className="status-banner error folder-picker-status">{error}</div>}
+        {loading && <div className="status-banner folder-picker-status">Loading directories…</div>}
 
-        <div className="picker-tree">
-          {nodes.map((node, i) => (
-            <FolderNode key={node.name} node={node} path={[i]} depth={0} onToggle={toggleExpand} onOpen={handleOpen} />
-          ))}
-          {!loading && nodes.length === 0 && <p className="picker-empty">No directories found.</p>}
+        {/* Directory Listing */}
+        <div className="folder-picker-list">
+          {!loading && entries.length === 0 && !error && (
+            <div className="folder-picker-empty">No subdirectories in this folder</div>
+          )}
+          {entries.map((dir) => {
+            const childPath = joinPath(rootPath, dir.name);
+            return (
+              <div key={dir.name} className="folder-picker-item">
+                <button
+                  type="button"
+                  className="folder-picker-item-nav"
+                  onClick={() => void loadTree(childPath)}
+                  title={`Enter ${dir.name}`}
+                >
+                  <FolderIcon />
+                  <span className="folder-picker-item-name">{dir.name}</span>
+                </button>
+                <button
+                  type="button"
+                  className="folder-picker-select-btn"
+                  onClick={() => handleSelectFolder(childPath, dir.name)}
+                  title={`Select folder ${dir.name}`}
+                >
+                  Select
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Action Footer */}
+        <div className="folder-picker-footer">
+          <div className="folder-picker-footer-left">
+            <span className="folder-picker-footer-path" title={rootPath}>
+              {rootPath}
+            </span>
+          </div>
+          <div className="folder-picker-footer-actions">
+            {canClose && (
+              <button
+                type="button"
+                className="folder-picker-btn-secondary"
+                onClick={() => setShowPicker(false)}
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              type="button"
+              className="folder-picker-btn-primary"
+              disabled={loading || !rootPath}
+              onClick={() => handleSelectFolder(rootPath, currentFolderName)}
+            >
+              Select Current Folder
+            </button>
+          </div>
         </div>
       </div>
-    </main>
-  );
-}
-
-type FolderNodeProps = {
-  node: TreeNode;
-  path: number[];
-  depth: number;
-  onToggle: (node: TreeNode, path: number[]) => void;
-  onOpen: (node: TreeNode) => void;
-};
-
-function FolderNode({ node, path, depth, onToggle, onOpen }: FolderNodeProps) {
-  return (
-    <div className="folder-node">
-      <div className="folder-row" style={{ paddingLeft: `${depth * 20 + 8}px` }}>
-        <button className="folder-toggle" onClick={() => onToggle(node, path)} type="button">
-          {node.expanded ? '▼' : '▶'}
-        </button>
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, opacity: 0.8 }}>
-          <path d="M1.5 3.5 a1 1 0 0 1 1 -1 h3 l1.5 1.5 h5.5 a1 1 0 0 1 1 1 v8 a1 1 0 0 1 -1 1 h-10 a1 1 0 0 1 -1 -1z" fill="#38bdf8" opacity="0.3" stroke="#38bdf8" strokeWidth="1" />
-        </svg>
-        <span className="folder-name">{node.name}</span>
-        <button className="folder-open-btn" onClick={() => onOpen(node)} type="button">
-          Open
-        </button>
-      </div>
-      {node.expanded && node.children?.map((child, i) => (
-        <FolderNode key={child.name} node={child} path={[...path, i]} depth={depth + 1} onToggle={onToggle} onOpen={onOpen} />
-      ))}
     </div>
   );
-}
-
-function joinPath(base: string, name: string): string {
-  if (base.includes('\\')) {
-    return base.endsWith('\\') ? base + name : base + '\\' + name;
-  }
-  return base.endsWith('/') ? base + name : base + '/' + name;
-}
-
-function updateNodeAtPath(nodes: TreeNode[], path: number[], updated: TreeNode): TreeNode[] {
-  if (path.length === 1) {
-    return nodes.map((n, i) => (i === path[0] ? updated : n));
-  }
-  return nodes.map((n, i) => {
-    if (i === path[0] && n.children) {
-      return { ...n, children: updateNodeAtPath(n.children, path.slice(1), updated) };
-    }
-    return n;
-  });
 }
