@@ -2,7 +2,7 @@
 .sidebar-overlay {
   position: fixed;
   top: 0;
-  left: 52px;
+  left: 48px;
   bottom: 0;
   width: 300px;
   z-index: 100;
@@ -44,7 +44,7 @@
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(720px, calc(100vw - 52px));
+  width: min(720px, calc(100vw - 48px));
   z-index: 100;
   background: var(--editor-bg);
   border-left: 1px solid var(--border-color);
@@ -339,7 +339,7 @@
   }
 
   .workspace-sidebar {
-    left: 52px;
+    left: 48px;
     width: 300px;
     flex-basis: auto;
     transform: translateX(-100%);
@@ -362,7 +362,7 @@
 
   .workspace-browser {
     right: 0;
-    width: min(720px, calc(100vw - 52px));
+    width: min(720px, calc(100vw - 48px));
     transform: translateX(100%);
   }
 

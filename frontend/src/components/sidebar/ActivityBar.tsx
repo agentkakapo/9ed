@@ -174,6 +174,7 @@ export function ActivityBar() {
       >
         <span className="activity-icon"><BrowserIcon /></span>
       </button>
+      <div className="activity-bar-spacer" />
       <button
         className={`activity-btn${activePanel === 'settings' && sidebarVisible ? ' active' : ''}`}
         onClick={() => openSidebarPanel('settings')}
@@ -182,6 +183,7 @@ export function ActivityBar() {
       >
         <span className="activity-icon"><SettingsIcon /></span>
       </button>
+      <div className="activity-status-dot" title="IDE Server Connected" />
     </nav>
   );
 }

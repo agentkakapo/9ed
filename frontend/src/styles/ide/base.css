@@ -3,21 +3,58 @@
   --app-viewport-width: 100vw;
   --app-viewport-top: 0px;
   --app-viewport-left: 0px;
-  --sidebar-bg: #1e1e2e;
-  --sidebar-fg: #cdd6f4;
-  --sidebar-hover: #313244;
-  --sidebar-active: #45475a;
-  --activity-bg: #181825;
-  --activity-fg: #6c7086;
-  --activity-active: #cdd6f4;
-  --editor-bg: #1e1e1e;
-  --border-color: #313244;
-  --tab-bg: #181825;
-  --tab-active-bg: #1e1e1e;
-  --tab-fg: #a6adc8;
-  --tab-active-fg: #cdd6f4;
-  --accent-blue: #0e639c;
-  --accent-blue-light: #1177bb;
+
+  /* ── Obsidian Cyber Palette ── */
+  --app-bg: #08090d;
+  --app-canvas: #0b0d14;
+  --editor-bg: #0b0d14;
+
+  --sidebar-bg: #0f121d;
+  --sidebar-fg: #f1f5f9;
+  --sidebar-fg-muted: #94a3b8;
+  --sidebar-hover: rgba(255, 255, 255, 0.05);
+  --sidebar-active: rgba(99, 102, 241, 0.15);
+
+  --activity-bg: #08090f;
+  --activity-fg: #64748b;
+  --activity-hover: #94a3b8;
+  --activity-active: #38bdf8;
+
+  --border-color: rgba(255, 255, 255, 0.075);
+  --border-color-subtle: rgba(255, 255, 255, 0.04);
+  --border-color-hover: rgba(255, 255, 255, 0.15);
+  --border-color-active: rgba(99, 102, 241, 0.5);
+
+  --tab-bg: #08090f;
+  --tab-active-bg: #0b0d14;
+  --tab-fg: #94a3b8;
+  --tab-active-fg: #f8fafc;
+
+  /* Luminous agentic accents */
+  --accent-primary: #6366f1;
+  --accent-primary-hover: #4f46e5;
+  --accent-blue: #38bdf8;
+  --accent-blue-light: #60a5fa;
+  --accent-cyan: #38bdf8;
+  --accent-violet: #a855f7;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-rose: #f43f5e;
+
+  /* Context bar thresholds */
+  --ctx-bar-low: #38bdf8;
+  --ctx-bar-mid: #f59e0b;
+  --ctx-bar-high: #f43f5e;
+
+  /* Glass & Depth */
+  --glass-surface: rgba(15, 18, 29, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glow-accent: 0 0 20px rgba(99, 102, 241, 0.2);
+  --glow-cyan: 0 0 20px rgba(56, 189, 248, 0.2);
+
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'IBM Plex Mono', Consolas, monospace;
 }
 
 * {
@@ -31,7 +68,9 @@ body {
   overflow: hidden;
   background: var(--editor-bg);
   color: var(--sidebar-fg);
-  font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
@@ -42,6 +81,7 @@ body {
   height: var(--app-viewport-height);
   min-height: 0;
   overflow: hidden;
+  background: var(--app-bg);
 }
 
 .ide-shell {
@@ -49,4 +89,27 @@ body {
   height: var(--app-viewport-height);
   min-height: 0;
   overflow: hidden;
+}
+
+.workspace-shell {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  background: var(--app-bg);
+}
+
+/* Transitions and subtle polish */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+::selection {
+  background: rgba(99, 102, 241, 0.35);
+  color: #ffffff;
 }

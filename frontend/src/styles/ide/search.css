@@ -3,69 +3,96 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  background: var(--sidebar-bg);
 }
 
 .search-input-row {
   display: flex;
-  padding: 8px;
-  gap: 4px;
+  padding: 10px 12px;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.01);
 }
 
 .search-input {
   flex: 1;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: var(--activity-bg);
-  color: var(--sidebar-fg);
-  font-size: 0.85rem;
+  border-radius: 6px;
+  background: #090a10;
+  color: #f1f5f9;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.search-input:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
 }
 
 .search-btn {
-  padding: 6px 10px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: var(--sidebar-hover);
-  color: var(--sidebar-fg);
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #e2e8f0;
   cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.search-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .search-results {
   overflow-y: auto;
   flex: 1;
+  padding: 6px 4px;
 }
 
 .search-result-row {
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding: 6px 12px;
+  padding: 6px 10px;
   border: none;
+  border-radius: 6px;
   background: transparent;
-  color: var(--sidebar-fg);
+  color: #e2e8f0;
   cursor: pointer;
   text-align: left;
   font-size: 0.8rem;
-  gap: 2px;
+  gap: 3px;
+  transition: background 0.12s ease;
 }
 
 .search-result-row:hover {
-  background: var(--sidebar-hover);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .search-result-path {
-  color: var(--activity-fg);
-  font-size: 0.75rem;
+  color: var(--accent-cyan);
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  opacity: 0.85;
 }
 
 .search-result-preview {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: #94a3b8;
 }
 
 .search-empty {
-  padding: 16px;
-  color: var(--activity-fg);
-  font-size: 0.85rem;
+  padding: 24px 16px;
+  color: var(--sidebar-fg-muted);
+  font-size: 0.82rem;
+  text-align: center;
 }

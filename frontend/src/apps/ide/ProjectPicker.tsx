@@ -119,6 +119,7 @@ export function ProjectPicker() {
       <div className="picker-card">
         <header className="picker-hero">
           <img className="picker-logo" src="/logo.svg" alt="9ed" />
+          <p className="picker-subtitle">High-Performance Agentic Cloud IDE</p>
         </header>
 
         {recentProjects.length > 0 && (
@@ -133,7 +134,12 @@ export function ProjectPicker() {
                     onClick={() => addProject(rp.path, rp.name)}
                     type="button"
                   >
-                    <span className="picker-project-name">{rp.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+                        <path d="M1.5 3.5 a1 1 0 0 1 1 -1 h3 l1.5 1.5 h5.5 a1 1 0 0 1 1 1 v8 a1 1 0 0 1 -1 1 h-10 a1 1 0 0 1 -1 -1z" fill="#6366f1" opacity="0.4" stroke="#818cf8" strokeWidth="1.2" />
+                      </svg>
+                      <span className="picker-project-name">{rp.name}</span>
+                    </div>
                     <span className="picker-project-path">{rp.path}</span>
                   </button>
                   <button
@@ -168,7 +174,12 @@ export function ProjectPicker() {
                   onClick={() => handleSelectExisting(p.id)}
                   type="button"
                 >
-                  <span className="picker-project-name">{p.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+                      <path d="M1.5 3.5 a1 1 0 0 1 1 -1 h3 l1.5 1.5 h5.5 a1 1 0 0 1 1 1 v8 a1 1 0 0 1 -1 1 h-10 a1 1 0 0 1 -1 -1z" fill="#38bdf8" opacity="0.4" stroke="#38bdf8" strokeWidth="1.2" />
+                    </svg>
+                    <span className="picker-project-name">{p.name}</span>
+                  </div>
                   <span className="picker-project-path">{p.path}</span>
                 </button>
               ))}
@@ -229,6 +240,9 @@ function FolderNode({ node, path, depth, onToggle, onOpen }: FolderNodeProps) {
         <button className="folder-toggle" onClick={() => onToggle(node, path)} type="button">
           {node.expanded ? '▼' : '▶'}
         </button>
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, opacity: 0.8 }}>
+          <path d="M1.5 3.5 a1 1 0 0 1 1 -1 h3 l1.5 1.5 h5.5 a1 1 0 0 1 1 1 v8 a1 1 0 0 1 -1 1 h-10 a1 1 0 0 1 -1 -1z" fill="#38bdf8" opacity="0.3" stroke="#38bdf8" strokeWidth="1" />
+        </svg>
         <span className="folder-name">{node.name}</span>
         <button className="folder-open-btn" onClick={() => onOpen(node)} type="button">
           Open
