@@ -30,5 +30,39 @@ func detectAntigravity() AgentConfig {
 		}
 	}
 
+	cfg.Providers = append(cfg.Providers, ProviderInfo{
+		ID:     "google",
+		Name:   "Google",
+		HasKey: true,
+	})
+
+	knownModels := []struct {
+		id, name string
+		reason   bool
+	}{
+		{"gemini-3.8-flash-high", "Gemini 3.8 Flash (High)", true},
+		{"gemini-3.8-flash-medium", "Gemini 3.8 Flash (Medium)", true},
+		{"gemini-3.8-flash-low", "Gemini 3.8 Flash (Low)", false},
+		{"gemini-3.7-flash-high", "Gemini 3.7 Flash (High)", true},
+		{"gemini-3.7-flash-medium", "Gemini 3.7 Flash (Medium)", true},
+		{"gemini-3.7-flash-low", "Gemini 3.7 Flash (Low)", false},
+		{"gemini-3.6-flash-high", "Gemini 3.6 Flash (High)", true},
+		{"gemini-3.6-flash-medium", "Gemini 3.6 Flash (Medium)", true},
+		{"gemini-3.6-flash-low", "Gemini 3.6 Flash (Low)", false},
+		{"gemini-pro-agent", "Gemini 3.1 Pro (High)", true},
+		{"gemini-3.1-pro-low", "Gemini 3.1 Pro (Low)", false},
+	}
+	for _, m := range knownModels {
+		cfg.Models = append(cfg.Models, ModelInfo{
+			ID:        m.id,
+			Name:      m.name,
+			Provider:  "google",
+			CanReason: m.reason,
+		})
+	}
+	if cfg.ActiveModel == "" {
+		cfg.ActiveModel = "gemini-3.8-flash-high"
+	}
+
 	return cfg
 }

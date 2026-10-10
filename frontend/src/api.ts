@@ -471,14 +471,14 @@ export type CreatedChatSession = {
   acpSessionId?: string;
 };
 
-export async function createChatSession(agentId: string, workDir?: string, useActiveTerminal = false, activeTerminalId?: string | null, useActiveBrowser = false, activeBrowserTabId?: string | null): Promise<CreatedChatSession> {
+export async function createChatSession(agentId: string, workDir?: string, useActiveTerminal = false, activeTerminalId?: string | null, useActiveBrowser = false, activeBrowserTabId?: string | null, model?: string): Promise<CreatedChatSession> {
   const response = await fetch('/api/chat/sessions', {
     method: 'POST',
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ agentId, workDir, useActiveTerminal, activeTerminalId, useActiveBrowser, activeBrowserTabId }),
+    body: JSON.stringify({ agentId, workDir, useActiveTerminal, activeTerminalId, useActiveBrowser, activeBrowserTabId, model }),
   });
   return parseResponse<CreatedChatSession>(response);
 }

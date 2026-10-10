@@ -30,6 +30,7 @@ type chatCreateRequest struct {
 	ActiveTerminalID   string `json:"activeTerminalId,omitempty"`
 	UseActiveBrowser   bool   `json:"useActiveBrowser,omitempty"`
 	ActiveBrowserTabID string `json:"activeBrowserTabId,omitempty"`
+	Model              string `json:"model,omitempty"`
 }
 
 type chatCreateResponse struct {
@@ -1152,6 +1153,10 @@ func (a *API) handleChatSessions(w http.ResponseWriter, r *http.Request) {
 		}
 		if previousLiveID != "" && previousLiveID != session.ID() {
 			a.chatSessionManager.Remove(previousLiveID)
+		}
+
+		if req.Model != "" {
+			_ = session.SetConfigOption(context.Background(), "model", req.Model)
 		}
 
 		if a.chatStore != nil {

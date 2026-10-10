@@ -45,6 +45,8 @@ function resetChatStore() {
     activeTerminalId: null,
     restoring: false,
     lastRestoreError: null,
+    draftConfigByAgent: {},
+    lastConfigByAgent: {},
   });
 }
 
@@ -1515,3 +1517,78 @@ describe('resume/restore browser intent vs effective enablement (VAL-HARDEN-005)
     expect(session?.useActiveBrowser).toBe(true);
   });
 });
+
+describe('effective config options & draft model options in new chat', () => {
+  beforeEach(() => {
+    resetChatStore();
+    vi.clearAllMocks();
+  });
+
+  it('returns default config options for antigravity when no active session exists', () => {
+    useChatStore.setState({
+      sessions: [],
+      activeSessionId: null,
+      selectedAgentId: 'antigravity',
+      draftConfigByAgent: {},
+    });
+
+    const options = useChatStore.getState().getEffectiveConfigOptions('antigravity');
+    expect(options.length).toBeGreaterThan(0);
+    const modelOpt = options.find((o) => o.id === 'model');
+    expect(modelOpt).toBeDefined();
+    expect(modelOpt?.currentValue).toBe('gemini-3.8-flash-high');
+    expect(modelOpt?.options.some((o) => o.value === 'gemini-3.8-flash-high')).toBe(true);
+  });
+
+  it('updates currentValue with draftConfigByAgent when setDraftConfigOption is called', () => {
+    useChatStore.setState({
+      sessions: [],
+      activeSessionId: null,
+      selectedAgentId: 'antigravity',
+      draftConfigByAgent: {},
+    });
+
+    useChatStore.getState().setDraftConfigOption('antigravity', 'model', 'gemini-3.7-flash-medium');
+    const options = useChatStore.getState().getEffectiveConfigOptions('antigravity');
+    const modelOpt = options.find((o) => o.id === 'model');
+    expect(modelOpt?.currentValue).toBe('gemini-3.7-flash-medium');
+  });
+
+  it('records configOptions into lastConfigByAgent when config_options event is handled', () => {
+    useChatStore.setState({
+      sessions: [{
+        id: 'sess-1',
+        recordId: 'sess-1',
+        agentId: 'antigravity',
+        title: 'Antigravity Session',
+        messages: [],
+        status: 'idle',
+        createdAt: 1,
+        kind: 'live',
+        workDir: '/repo',
+      }],
+      activeSessionId: 'sess-1',
+      lastConfigByAgent: {},
+    });
+
+    useChatStore.getState().handleChatEvent('sess-1', {
+      type: 'config_options',
+      configOptions: [{
+        id: 'model',
+        name: 'Model Selection',
+        type: 'select',
+        currentValue: 'gemini-pro-agent',
+        options: [{ value: 'gemini-pro-agent', name: 'Gemini 3.1 Pro' }],
+      }],
+    });
+
+    const lastConfig = useChatStore.getState().lastConfigByAgent['antigravity'];
+    expect(lastConfig).toBeDefined();
+    expect(lastConfig?.[0]?.currentValue).toBe('gemini-pro-agent');
+
+    // And getEffectiveConfigOptions uses lastConfigByAgent
+    const options = useChatStore.getState().getEffectiveConfigOptions('antigravity');
+    expect(options[0]?.currentValue).toBe('gemini-pro-agent');
+  });
+});
+

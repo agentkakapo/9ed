@@ -247,7 +247,12 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
         const terminalEnabled = useActiveTerminal && !!activeTerminalId;
         const browserTabId = activeProject?.activeBrowserTabId ?? null;
         const browserEnabled = useActiveBrowser && !!browserTabId;
-        const created = await createChatSession(agentId, activeProject?.path, terminalEnabled, terminalEnabled ? activeTerminalId : undefined, browserEnabled, browserTabId);
+        const draftConfig = useChatStore.getState().draftConfigByAgent[agentId];
+        const draftModel = draftConfig?.['model'];
+        const effectiveConfigOptions = useChatStore.getState().getEffectiveConfigOptions(agentId);
+        const created = draftModel
+          ? await createChatSession(agentId, activeProject?.path, terminalEnabled, terminalEnabled ? activeTerminalId : undefined, browserEnabled, browserTabId, draftModel)
+          : await createChatSession(agentId, activeProject?.path, terminalEnabled, terminalEnabled ? activeTerminalId : undefined, browserEnabled, browserTabId);
         const session: ChatSessionInfo = {
           id: created.id,
           recordId: created.resumedFrom ?? created.id,
@@ -259,6 +264,7 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
           kind: 'live',
           workDir: created.workDir ?? activeProject?.path,
           acpSessionId: created.acpSessionId,
+          configOptions: effectiveConfigOptions,
           useActiveTerminal: terminalEnabled,
           terminalId: terminalEnabled ? activeTerminalId : undefined,
           useActiveBrowser: browserEnabled,
@@ -269,7 +275,7 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
         createSessionStore(session);
         setActiveSession(session.id);
         useChatStore.getState().cancelNewChat();
-        sendMessage(content, undefined, attachments);
+        void sendMessage(content, undefined, attachments);
       } catch (err) {
         console.error('Failed to auto-create chat session on send:', err);
       } finally {
@@ -464,7 +470,7 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
           onCancel={cancel}
           streaming={isStreaming}
           disabled={(isArchived && !canResumeArchived) || isConnecting}
-          canSend={connected}
+          canSend={!activeSession ? true : connected}
           lockedBy={lockedBy}
           placeholder={!activeSession ? 'Describe a task or ask a question' : 'Type / for commands'}
           topContent={!activeSession ? <NewChatBar /> : undefined}

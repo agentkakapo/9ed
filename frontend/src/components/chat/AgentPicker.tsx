@@ -165,11 +165,26 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
   const useActiveTerminal = useChatStore((s) => s.useActiveTerminal);
   const setTerminalEnabled = useChatStore((s) => s.setTerminalEnabled);
   const activeTerminalId = useChatStore((s) => s.activeTerminalId);
+  const agents = useChatStore((s) => s.agents);
+  const selectedAgentId = useChatStore((s) => s.selectedAgentId);
+  const draftConfigByAgent = useChatStore((s) => s.draftConfigByAgent);
+  const setDraftConfigOption = useChatStore((s) => s.setDraftConfigOption);
+  const getEffectiveConfigOptions = useChatStore((s) => s.getEffectiveConfigOptions);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   const activeSession = sessions.find((s) => s.id === activeSessionId && sessionBelongsToWorkDir(s, activeProject?.path));
-  const configOptions = activeSession?.configOptions ?? [];
   const hasActiveSession = !!activeSession;
+
+  const currentAgent = (selectedAgentId ? agents.find((a) => a.id === selectedAgentId && a.available) : undefined)
+    ?? agents.find((a) => a.available)
+    ?? agents[0];
+
+  const effectiveOptions = useMemo(() => {
+    if (activeSession) {
+      return activeSession.configOptions ?? [];
+    }
+    return getEffectiveConfigOptions(currentAgent?.id);
+  }, [activeSession, currentAgent?.id, getEffectiveConfigOptions, draftConfigByAgent]);
   const activeBrowserTabId = activeProject?.activeBrowserTabId ?? null;
   const browserCurrentEnabled = !!(activeSession?.useActiveBrowser ?? useActiveBrowser);
   const terminalCurrentEnabled = !!(activeSession?.useActiveTerminal ?? (useActiveTerminal && !!activeTerminalId));
@@ -198,7 +213,11 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
     : 'Enable or disable the active terminal MCP bridge for this agent session';
   const handleChange = (configId: string, value: string) => {
     setOpenDropdown(null);
-    setConfigOption?.(configId, value);
+    if (hasActiveSession) {
+      setConfigOption?.(configId, value);
+    } else if (currentAgent) {
+      setDraftConfigOption(currentAgent.id, configId, value);
+    }
   };
 
   const handleAutoApproveToggle = () => {
@@ -227,7 +246,7 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
     void setTerminalEnabled(enabled);
   };
 
-  const normalizedOptions = useMemo(() => configOptions.map(normalizeConfigOption), [configOptions]);
+  const normalizedOptions = useMemo(() => effectiveOptions.map(normalizeConfigOption), [effectiveOptions]);
   const modelOpt = normalizedOptions.find((opt) => isModelOption(opt));
   const effortSplitting = useMemo(() => {
     if (!modelOpt || !hasModelEfforts(modelOpt)) return null;
@@ -242,10 +261,10 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
   const modeOpt = normalizedOptions.find((opt) => !isModelOption(opt) && !isEffortOption(opt) && opt.id.toLowerCase().includes('mode'));
   const extraOpts = normalizedOptions.filter((opt) => opt !== modelOpt && opt !== effortOpt && opt !== modeOpt);
   const dropdownProps = (id: string) => ({
-    isOpen: !hasActiveSession ? false : openDropdown === id,
-    onToggle: () => hasActiveSession && setOpenDropdown(openDropdown === id ? null : id),
+    isOpen: openDropdown === id,
+    onToggle: () => setOpenDropdown(openDropdown === id ? null : id),
     onClose: () => setOpenDropdown(null),
-    disabled: !hasActiveSession || busy,
+    disabled: busy,
   });
 
   const toggleRow = (

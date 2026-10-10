@@ -468,5 +468,70 @@ describe('ConfigBar model dropdown', () => {
 
     expect(setConfigOptionSpy).toHaveBeenCalledWith('model', 'claude-opus-5-5');
   });
+
+  it('renders model option in new chat pane when activeSession is null and allows selection', () => {
+    resetConfigStores({ withTab: true });
+    useChatStore.setState({
+      sessions: [],
+      activeSessionId: null,
+      agents: [
+        { id: 'claude', label: 'Claude Code', available: true, configFound: true, activeModel: '', models: [], providers: [] },
+      ],
+      selectedAgentId: 'claude',
+      isNewChat: true,
+      draftConfigByAgent: {},
+    });
+
+    act(() => {
+      root.render(<ConfigBar />);
+    });
+
+    const trigger = container.querySelector('.model-picker-trigger');
+    expect(trigger).not.toBeNull();
+    expect(trigger?.textContent).toContain('Sonnet 5.5');
+
+    act(() => {
+      trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const menu = document.body.querySelector('.model-menu-dropdown');
+    expect(menu).not.toBeNull();
+    expect(menu?.textContent).toContain('Opus 5.5');
+
+    const opusBtn = Array.from(menu?.querySelectorAll('.model-menu-item') ?? []).find((el) => el.textContent?.includes('Opus 5.5'));
+    expect(opusBtn).toBeTruthy();
+
+    act(() => {
+      opusBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(useChatStore.getState().draftConfigByAgent['claude']?.['model']).toBe('opus');
+  });
+
+  it('renders model option and effort controls for antigravity in new chat', () => {
+    resetConfigStores({ withTab: true });
+    useChatStore.setState({
+      sessions: [],
+      activeSessionId: null,
+      agents: [
+        { id: 'antigravity', label: 'Google Antigravity', available: true, configFound: true, activeModel: '', models: [], providers: [] },
+      ],
+      selectedAgentId: 'antigravity',
+      isNewChat: true,
+      draftConfigByAgent: {},
+    });
+
+    act(() => {
+      root.render(<ConfigBar />);
+    });
+
+    const trigger = container.querySelector('.model-picker-trigger');
+    expect(trigger).not.toBeNull();
+    expect(trigger?.textContent).toContain('Gemini 3.8 Flash');
+
+    const effortSlider = container.querySelector('.effort-pill-btn');
+    expect(effortSlider).not.toBeNull();
+    expect(effortSlider?.textContent).toContain('High');
+  });
 });
 
