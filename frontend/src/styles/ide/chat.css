@@ -47,6 +47,15 @@
   flex-shrink: 0;
 }
 
+.chat-session-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+}
+
 .chat-new-btn {
   display: inline-flex;
   align-items: center;

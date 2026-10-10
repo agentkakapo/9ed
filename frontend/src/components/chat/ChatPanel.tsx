@@ -314,20 +314,18 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
           </div>
         </div>
         <div className="chat-header-actions">
-          <div className="pane-toggles-group">
-            <ChatSessionList />
-            {activeSession && (
-              <button
-                type="button"
-                className={`pane-toggle-btn chat-debug-btn${showChatDebugPanel ? ' active' : ''}`}
-                title={showChatDebugPanel ? 'Hide chat debug log' : 'Show chat debug log'}
-                aria-label={showChatDebugPanel ? 'Hide chat debug log' : 'Show chat debug log'}
-                onClick={() => setShowChatDebugPanel((value) => !value)}
-              >
-                <ChatDebugIcon />
-              </button>
-            )}
-          </div>
+          <ChatSessionList />
+          {activeSession && (
+            <button
+              type="button"
+              className={`pane-toggle-btn chat-debug-btn${showChatDebugPanel ? ' active' : ''}`}
+              title={showChatDebugPanel ? 'Hide chat debug log' : 'Show chat debug log'}
+              aria-label={showChatDebugPanel ? 'Hide chat debug log' : 'Show chat debug log'}
+              onClick={() => setShowChatDebugPanel((value) => !value)}
+            >
+              <ChatDebugIcon />
+            </button>
+          )}
           {auxiliaryToggles}
         </div>
       </div>

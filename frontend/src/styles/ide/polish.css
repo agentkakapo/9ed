@@ -33,8 +33,7 @@
 }
 
 .agent-picker,
-.chat-new-btn,
-.chat-history-btn {
+.chat-new-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -50,8 +49,7 @@
 }
 
 .agent-picker:hover,
-.chat-new-btn:hover,
-.chat-history-btn:hover {
+.chat-new-btn:hover {
   background: rgba(255, 255, 255, 0.07);
   border-color: rgba(255, 255, 255, 0.2);
   color: #ffffff;

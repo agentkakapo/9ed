@@ -591,28 +591,33 @@
 }
 
 .pane-toggles-group {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(0, 0, 0, 0.2);
-  padding: 3px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 6px;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  border: none;
 }
 
 .pane-toggle-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 5px 7px;
-  min-width: 28px;
+  width: 28px;
   height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  margin: 0;
   color: #94a3b8;
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
+  box-sizing: border-box;
+  line-height: 1;
 }
 
 .pane-toggle-btn svg {
@@ -623,39 +628,47 @@
 
 .pane-toggle-btn:hover {
   color: #f1f5f9;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
 }
 
 .pane-toggle-btn.active {
   color: #38bdf8;
-  background: rgba(56, 189, 248, 0.12);
-  border-color: rgba(56, 189, 248, 0.35);
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
+  background: rgba(56, 189, 248, 0.14);
+  border: none;
+  box-shadow: none;
   font-weight: 600;
 }
 
-.pane-toggles-group .chat-history-btn,
-.pane-toggles-group .chat-debug-btn {
+.chat-history-btn,
+.chat-debug-btn {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  margin: 0;
+  border: none;
   background: transparent;
-  border: 1px solid transparent;
-  min-height: unset;
-  line-height: inherit;
   box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.pane-toggles-group .chat-history-btn:hover,
-.pane-toggles-group .chat-debug-btn:hover {
+.chat-history-btn:hover,
+.chat-debug-btn:hover {
   color: #f1f5f9;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
 }
 
-.pane-toggles-group .chat-history-btn.active,
-.pane-toggles-group .chat-debug-btn.active {
+.chat-history-btn.active,
+.chat-debug-btn.active {
   color: #38bdf8;
-  background: rgba(56, 189, 248, 0.12);
-  border-color: rgba(56, 189, 248, 0.35);
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
-  font-weight: 600;
+  background: rgba(56, 189, 248, 0.14);
+  border: none;
+  box-shadow: none;
 }
 
 .workspace-chat-container {

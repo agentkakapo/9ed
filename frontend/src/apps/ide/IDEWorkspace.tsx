@@ -531,7 +531,7 @@ export function IDEWorkspace() {
           <div className="workspace-chat-container">
             <ChatPanel
               auxiliaryToggles={
-                <div className="pane-toggles-group">
+                <>
                   <button
                     className={`pane-toggle-btn${activeRightPane === 'editor' ? ' active' : ''}`}
                     onClick={() => toggleRightPane('editor')}
@@ -568,7 +568,7 @@ export function IDEWorkspace() {
                   >
                     <GitIcon />
                   </button>
-                </div>
+                </>
               }
               onToggleSidebar={toggleSidebar}
               sidebarVisible={sidebarVisible}
