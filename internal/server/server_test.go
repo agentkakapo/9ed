@@ -235,3 +235,23 @@ func removeAllWithRetry(path string) error {
 	}
 	return err
 }
+
+func TestServerAddr(t *testing.T) {
+	srvDefault := New(config.Config{Port: "8080"})
+	defer srvDefault.Shutdown()
+	if got := srvDefault.Addr(); got != ":8080" {
+		t.Fatalf("expected :8080, got %q", got)
+	}
+
+	srvHost := New(config.Config{Host: "127.0.0.1", Port: "8080"})
+	defer srvHost.Shutdown()
+	if got := srvHost.Addr(); got != "127.0.0.1:8080" {
+		t.Fatalf("expected 127.0.0.1:8080, got %q", got)
+	}
+
+	srvListenAddr := New(config.Config{Host: "127.0.0.1:9090", Port: "8080"})
+	defer srvListenAddr.Shutdown()
+	if got := srvListenAddr.Addr(); got != "127.0.0.1:9090" {
+		t.Fatalf("expected 127.0.0.1:9090, got %q", got)
+	}
+}

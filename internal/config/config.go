@@ -11,6 +11,7 @@ import (
 )
 
 type Config struct {
+	Host                 string
 	Port                 string
 	BasicAuthUsername    string
 	BasicAuthPassword    string
@@ -67,7 +68,13 @@ func LoadFromEnv() (Config, error) {
 		}
 	}
 
+	host := strings.TrimSpace(os.Getenv("HOST"))
+	if host == "" {
+		host = strings.TrimSpace(os.Getenv("LISTEN_ADDR"))
+	}
+
 	cfg := Config{
+		Host:                 host,
 		Port:                 strings.TrimSpace(os.Getenv("PORT")),
 		BasicAuthUsername:    os.Getenv("BASIC_AUTH_USERNAME"),
 		BasicAuthPassword:    os.Getenv("BASIC_AUTH_PASSWORD"),

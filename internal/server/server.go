@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/fs"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -183,6 +184,12 @@ func panicRecovery(next http.Handler) http.Handler {
 }
 
 func (s *Server) Addr() string {
+	if s.Config.Host != "" {
+		if strings.Contains(s.Config.Host, ":") {
+			return s.Config.Host
+		}
+		return net.JoinHostPort(s.Config.Host, s.Config.Port)
+	}
 	return ":" + s.Config.Port
 }
 
