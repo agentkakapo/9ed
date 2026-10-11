@@ -122,9 +122,14 @@ func (a *SubprocessAdapter) NewSession(ctx context.Context, cwd string) (*Sessio
 		cwd = a.cfg.WorkDir
 	}
 
+	mcpServers := a.cfg.MCPServers
+	if mcpServers == nil {
+		mcpServers = []MCPServer{}
+	}
+
 	params := SessionNewParams{
 		CWD:        cwd,
-		MCPServers: a.cfg.MCPServers,
+		MCPServers: mcpServers,
 	}
 
 	raw, err := a.client.Call(ctx, MethodSessionNew, params)
@@ -156,10 +161,15 @@ func (a *SubprocessAdapter) ResumeSession(ctx context.Context, sessionID, cwd st
 		cwd = a.cfg.WorkDir
 	}
 
+	mcpServers := a.cfg.MCPServers
+	if mcpServers == nil {
+		mcpServers = []MCPServer{}
+	}
+
 	params := SessionResumeParams{
 		SessionID:  sessionID,
 		CWD:        cwd,
-		MCPServers: a.cfg.MCPServers,
+		MCPServers: mcpServers,
 	}
 
 	raw, err := a.client.Call(ctx, MethodSessionResume, params)

@@ -42,7 +42,11 @@ vi.mock('../../hooks/useChatSession', () => ({
 }));
 
 vi.mock('./ChatMessage', () => ({ ChatMessage: () => null }));
-vi.mock('./ChatInput', () => ({ ChatInput: () => null }));
+vi.mock('./ChatInput', () => ({
+  ChatInput: ({ onSend }: { onSend?: (content: string) => void }) => (
+    <button className="mock-chat-input-send" onClick={() => onSend?.('Hello')} />
+  ),
+}));
 vi.mock('./ChatQueue', () => ({ ChatQueue: () => null }));
 vi.mock('./PermissionDialog', () => ({ PermissionDialog: () => null }));
 vi.mock('./ChatSessionList', () => ({ ChatSessionList: () => null }));
@@ -118,18 +122,11 @@ describe('ChatPanel new chat', () => {
       root.render(<ChatPanel />);
     });
 
-    const newChatButton = container.querySelector('.chat-new-btn-icon');
-    expect(newChatButton).not.toBeNull();
+    const sendButton = container.querySelector('.mock-chat-input-send');
+    expect(sendButton).not.toBeNull();
 
     await act(async () => {
-      newChatButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-
-    const agentButton = document.body.querySelector('.chat-agent-create-item');
-    expect(agentButton).not.toBeNull();
-
-    await act(async () => {
-      agentButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      sendButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
     expect(createChatSession).toHaveBeenCalledWith('opencode', '/repo', false, undefined, false, null);

@@ -74,7 +74,7 @@ func New(cfg config.Config) *Server {
 	chat.SetActiveTerminalMCPServers([]acp.MCPServer{{
 		Name:    "9ed-active-terminal",
 		Command: "go",
-		Args:    []string{"run", filepath.Join(cwd, "cmd", "active-terminal-mcp")},
+		Args:    []string{"-C", cwd, "run", "./cmd/active-terminal-mcp"},
 		Env: []acp.EnvVariable{
 			{Name: "NINE_ED_MCP_ENDPOINT", Value: "http://127.0.0.1:" + cfg.Port + "/api/chat/terminal/run"},
 			{Name: "NINE_ED_MCP_TOKEN", Value: terminalMCPToken},
@@ -83,7 +83,7 @@ func New(cfg config.Config) *Server {
 	chat.SetActiveBrowserMCPServers([]acp.MCPServer{{
 		Name:    "9ed-active-browser",
 		Command: "go",
-		Args:    []string{"run", filepath.Join(cwd, "cmd", "active-browser-mcp")},
+		Args:    []string{"-C", cwd, "run", "./cmd/active-browser-mcp"},
 		Env: []acp.EnvVariable{
 			{Name: "NINE_ED_BROWSER_MCP_ENDPOINT", Value: "http://127.0.0.1:" + cfg.Port + "/api/chat/browser/run"},
 			{Name: "NINE_ED_BROWSER_MCP_TOKEN", Value: browserMCPToken},

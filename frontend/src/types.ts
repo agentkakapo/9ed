@@ -62,6 +62,8 @@ export type FileTab = {
   modified: boolean;
   conflict?: boolean;
   deleted?: boolean;
+  cursorLine?: number;
+  cursorColumn?: number;
 };
 
 export type Project = {
@@ -77,7 +79,7 @@ export type Project = {
   activeBrowserTabId?: string | null;
 };
 
-export type ActivePanel = 'explorer' | 'search' | 'projects' | 'terminal' | 'git' | 'browser' | 'settings';
+export type ActivePanel = 'sessions' | 'explorer' | 'search' | 'projects' | 'terminal' | 'git' | 'browser' | 'settings';
 
 export type AppConfig = {
   workspaceRoot: string;

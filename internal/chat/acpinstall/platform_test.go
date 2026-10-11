@@ -124,3 +124,12 @@ func TestHasBinaryDistribution(t *testing.T) {
 		}
 	})
 }
+
+func TestRegistryIDMapping(t *testing.T) {
+	if got := registryID("antigravity"); got != "antigravity-acp" {
+		t.Errorf("expected antigravity-acp, got %q", got)
+	}
+	if got := localID("antigravity-acp"); got != "antigravity" {
+		t.Errorf("expected antigravity, got %q", got)
+	}
+}

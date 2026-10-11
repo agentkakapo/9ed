@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const binaryDownloadTimeout = 120 * time.Second
+const binaryDownloadTimeout = 300 * time.Second
 
 // supportedPlatforms enumerates the platform keys that 9ed knows how to install
 // binary distributions for. This mirrors Zed's matrix:
@@ -345,8 +345,9 @@ func copyAndChmod(out *os.File, r io.Reader, path string, mode os.FileMode) erro
 }
 
 func safeJoin(base, name string) (string, error) {
-	cleanName := filepath.Clean(filepath.FromSlash(name))
-	if cleanName == "." || filepath.IsAbs(cleanName) || strings.HasPrefix(cleanName, ".."+string(filepath.Separator)) || cleanName == ".." {
+	normalized := strings.ReplaceAll(name, "\\", "/")
+	cleanName := filepath.Clean(filepath.FromSlash(normalized))
+	if cleanName == "." || filepath.IsAbs(cleanName) || strings.HasPrefix(cleanName, ".."+string(filepath.Separator)) || cleanName == ".." || strings.HasPrefix(normalized, "../") || normalized == ".." {
 		return "", fmt.Errorf("unsafe archive path: %s", name)
 	}
 	path := filepath.Join(base, cleanName)

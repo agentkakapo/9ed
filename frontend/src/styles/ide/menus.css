@@ -1,15 +1,244 @@
-/* Shortcuts Help */
-.shortcuts-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: center; justify-content: center; }
-.shortcuts-modal { background: var(--sidebar-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
-.shortcuts-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--sidebar-fg); }
-.shortcuts-group { margin-bottom: 16px; }
-.shortcuts-group-title { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--activity-fg); margin-bottom: 8px; }
-.shortcut-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 0.85rem; color: var(--sidebar-fg); }
-.shortcut-key { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; background: var(--activity-bg); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 8px; color: var(--sidebar-fg); }
+/* ── Shortcuts Help Modal ── */
+.shortcuts-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
 
-.context-menu { position: fixed; z-index: 1000; background: var(--sidebar-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 0; min-width: 200px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); font-size: 0.82rem; }
-.context-menu-item { display: flex; align-items: center; justify-content: space-between; padding: 5px 12px; cursor: pointer; color: var(--sidebar-fg); border-radius: 4px; margin: 0 4px; }
-.context-menu-item:hover { background: var(--list-active-bg, rgba(255,255,255,0.08)); border-radius: 4px; }
-.context-menu-item.disabled { opacity: 0.4; cursor: default; pointer-events: none; }
-.context-menu-shortcut { font-size: 0.72rem; opacity: 0.5; margin-left: 24px; }
-.context-menu-separator { height: 1px; background: var(--border-color); margin: 4px 0; }
+.shortcuts-modal {
+  background: #111422;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 520px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
+.shortcuts-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shortcuts-group {
+  margin-bottom: 20px;
+}
+
+.shortcuts-group-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-cyan);
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.shortcut-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.shortcut-key {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 2px 7px;
+  color: #f1f5f9;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Context Menu ── */
+.context-menu {
+  position: fixed;
+  z-index: 1000;
+  background: #111422;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 5px;
+  min-width: 210px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  font-size: 0.8rem;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: #e2e8f0;
+  border-radius: 6px;
+  margin: 1px 0;
+  transition: background 0.12s ease;
+}
+
+.context-menu-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #ffffff;
+}
+
+.context-menu-item.disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+.context-menu-shortcut {
+  font-size: 0.7rem;
+  color: var(--sidebar-fg-muted);
+  font-family: var(--font-mono);
+  margin-left: 20px;
+}
+
+.context-menu-separator {
+  height: 1px;
+  background: var(--border-color);
+  margin: 4px 0;
+}
+
+/* ── Quick Open Modal ── */
+.quickopen-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 210;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 10vh;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.quickopen-modal {
+  background: #111422;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 620px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+}
+
+.quickopen-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.quickopen-icon {
+  font-size: 0.95rem;
+  opacity: 0.7;
+}
+
+.quickopen-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f8fafc;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.quickopen-spinner {
+  font-size: 0.85rem;
+  color: var(--accent-cyan);
+}
+
+.quickopen-list {
+  overflow-y: auto;
+  max-height: 55vh;
+  padding: 6px;
+}
+
+.quickopen-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  gap: 2px;
+  transition: background 0.1s ease;
+}
+
+.quickopen-item:hover,
+.quickopen-item.active {
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.quickopen-item-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quickopen-item-name {
+  color: #f8fafc;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.quickopen-item-path {
+  color: var(--sidebar-fg-muted);
+  font-size: 0.75rem;
+  font-family: var(--font-mono, monospace);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quickopen-badge {
+  font-size: 0.68rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+}
+
+.quickopen-item-preview {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-family: var(--font-mono, monospace);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quickopen-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--sidebar-fg-muted);
+  font-size: 0.85rem;
+}

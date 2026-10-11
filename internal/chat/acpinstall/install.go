@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -12,7 +13,7 @@ import (
 
 const (
 	// installTimeout bounds a single install/update command.
-	installTimeout = 120 * time.Second
+	installTimeout = 300 * time.Second
 	// upgradeTimeout bounds opencode's own `opencode upgrade` command.
 	upgradeTimeout = 90 * time.Second
 )
@@ -32,6 +33,17 @@ var adapters = []AdapterInfo{
 	{ID: "pi", Package: "pi-acp", Manager: "npm", BinaryName: "pi-acp"},
 	{ID: "amp", Package: "amp-acp", Manager: "npm", BinaryName: "amp-acp"},
 	{ID: "copilot", Package: "github-copilot-cli", Manager: "npm", BinaryName: "github-copilot-cli"},
+	{ID: "antigravity", Package: "", Manager: "binary", BinaryName: "agy_acp_server.par"},
+}
+
+func init() {
+	if runtime.GOOS == "windows" {
+		for i := range adapters {
+			if adapters[i].ID == "antigravity" {
+				adapters[i].BinaryName = "agy_acp_server.exe"
+			}
+		}
+	}
 }
 
 var (

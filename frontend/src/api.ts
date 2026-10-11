@@ -268,10 +268,23 @@ export async function moveEntry(sourcePath: string, destPath: string): Promise<v
   }
 }
 
-export async function searchFiles(root: string, query: string, regex: boolean, maxResults: number): Promise<SearchResult[]> {
-  const params = new URLSearchParams({ root, query, regex: String(regex), maxResults: String(maxResults) });
+export async function searchFiles(
+  root: string,
+  query: string,
+  regex = false,
+  maxResults = 100,
+  caseSensitive = false,
+): Promise<SearchResult[]> {
+  const params = new URLSearchParams({
+    root,
+    query,
+    regex: String(regex),
+    caseSensitive: String(caseSensitive),
+    maxResults: String(maxResults),
+  });
   const response = await fetch(`/api/files/search?${params}`, { credentials: 'include' });
-  return parseResponse<SearchResult[]>(response);
+  const data = await parseResponse<SearchResult[]>(response);
+  return Array.isArray(data) ? data : [];
 }
 
 export function downloadFile(path: string): void {
@@ -471,14 +484,14 @@ export type CreatedChatSession = {
   acpSessionId?: string;
 };
 
-export async function createChatSession(agentId: string, workDir?: string, useActiveTerminal = false, activeTerminalId?: string | null, useActiveBrowser = false, activeBrowserTabId?: string | null): Promise<CreatedChatSession> {
+export async function createChatSession(agentId: string, workDir?: string, useActiveTerminal = false, activeTerminalId?: string | null, useActiveBrowser = false, activeBrowserTabId?: string | null, model?: string): Promise<CreatedChatSession> {
   const response = await fetch('/api/chat/sessions', {
     method: 'POST',
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ agentId, workDir, useActiveTerminal, activeTerminalId, useActiveBrowser, activeBrowserTabId }),
+    body: JSON.stringify({ agentId, workDir, useActiveTerminal, activeTerminalId, useActiveBrowser, activeBrowserTabId, model }),
   });
   return parseResponse<CreatedChatSession>(response);
 }

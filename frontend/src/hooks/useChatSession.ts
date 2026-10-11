@@ -588,6 +588,10 @@ export function useChatSession(): UseChatSessionResult {
         // flip (same true→true path on some reconnect races still works).
         reassertSoftControlsRef.current();
         updateActiveConnected();
+        const queuedNext = dequeueRef.current(sessionId);
+        if (queuedNext && sendQueuedRef.current) {
+          setTimeout(() => { void sendQueuedRef.current?.(queuedNext); }, 100);
+        }
         if (shouldSync) {
           void refreshSessionStateRef.current(sessionId);
         }
@@ -1008,7 +1012,16 @@ export function useChatSession(): UseChatSessionResult {
     async (content: string, context?: CodeContext, attachments?: Attachment[]) => {
       if (!activeSessionId) return;
       const conn = connectionsRef.current.get(activeSessionId);
-      if (!conn?.ws || conn.ws.readyState !== WebSocket.OPEN) return;
+      if (!conn?.ws || conn.ws.readyState !== WebSocket.OPEN) {
+        const queuedMsg: QueuedMessage = {
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+          content,
+          attachments: attachments?.length ? attachments : undefined,
+          createdAt: Date.now(),
+        };
+        useChatStore.getState().enqueueMessage(activeSessionId, queuedMsg);
+        return;
+      }
       const activeSession = useChatStore.getState().sessions.find((session) => session.id === activeSessionId);
 
       const displayContent = attachments?.length

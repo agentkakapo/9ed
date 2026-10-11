@@ -57,6 +57,124 @@ function writeStoredAgents(agents: ChatAgent[], selectedAgentId: string | null):
   }
 }
 
+export const DEFAULT_CONFIG_OPTIONS_BY_AGENT: Record<string, ConfigOptionInfo[]> = {
+  antigravity: [
+    {
+      id: 'model',
+      name: 'Model Selection',
+      category: 'model',
+      type: 'select',
+      currentValue: 'gemini-3.8-flash-high',
+      options: [
+        { value: 'gemini-3.8-flash-high', name: 'Gemini 3.8 Flash (High)', description: 'gemini-3.8-flash-high' },
+        { value: 'gemini-3.8-flash-medium', name: 'Gemini 3.8 Flash (Medium)', description: 'gemini-3.8-flash-medium' },
+        { value: 'gemini-3.8-flash-low', name: 'Gemini 3.8 Flash (Low)', description: 'gemini-3.8-flash-low' },
+        { value: 'gemini-3.7-flash-high', name: 'Gemini 3.7 Flash (High)', description: 'gemini-3.7-flash-high' },
+        { value: 'gemini-3.7-flash-medium', name: 'Gemini 3.7 Flash (Medium)', description: 'gemini-3.7-flash-medium' },
+        { value: 'gemini-3.7-flash-low', name: 'Gemini 3.7 Flash (Low)', description: 'gemini-3.7-flash-low' },
+        { value: 'gemini-3.6-flash-high', name: 'Gemini 3.6 Flash (High)', description: 'gemini-3.6-flash-high' },
+        { value: 'gemini-3.6-flash-medium', name: 'Gemini 3.6 Flash (Medium)', description: 'gemini-3.6-flash-medium' },
+        { value: 'gemini-3.6-flash-low', name: 'Gemini 3.6 Flash (Low)', description: 'gemini-3.6-flash-low' },
+        { value: 'gemini-pro-agent', name: 'Gemini 3.1 Pro (High)', description: 'gemini-pro-agent' },
+        { value: 'gemini-3.1-pro-low', name: 'Gemini 3.1 Pro (Low)', description: 'gemini-3.1-pro-low' },
+      ],
+    },
+    {
+      id: 'mode',
+      name: 'Session Mode',
+      category: 'mode',
+      type: 'select',
+      currentValue: 'default',
+      options: [
+        { value: 'default', name: 'Default', description: 'Default permission prompt flow' },
+        { value: 'auto_edit', name: 'Auto Edit', description: 'Auto-approve file edit tools' },
+        { value: 'yolo', name: 'YOLO', description: 'Auto-approve all tools' },
+      ],
+    },
+  ],
+  claude: [
+    {
+      id: 'model',
+      name: 'Model',
+      category: 'model',
+      type: 'select',
+      currentValue: 'default',
+      options: [
+        { value: 'default', name: 'Default (recommended)', description: 'Sonnet 5.5' },
+        { value: 'opus', name: 'Opus 5.5', description: 'For complex work and everyday tasks' },
+        { value: 'fable', name: 'Fable 5.1', description: 'For your toughest challenges' },
+        { value: 'sonnet', name: 'Sonnet 5.5', description: 'Most efficient for simpler tasks' },
+        { value: 'haiku', name: 'Haiku 5.5', description: 'Fastest for quick answers' },
+        { value: 'claude-haiku-4-5-20251001', name: 'Haiku 4.5', description: 'Fastest for quick answers' },
+        { value: 'claude-sonnet-5', name: 'Sonnet 5', description: 'Efficient for routine tasks' },
+        { value: 'claude-opus-5', name: 'Opus 5', description: 'Best for everyday, complex tasks' },
+        { value: 'claude-fable-5', name: 'Fable 5', description: 'Most capable for your hardest and longest-running tasks' },
+        { value: 'claude-opus-4-8', name: 'Opus 4.8', description: 'Best for everyday, complex tasks' },
+        { value: 'claude-opus-4-7', name: 'Opus 4.7', description: 'Best for everyday, complex tasks' },
+        { value: 'claude-opus-4-6', name: 'Opus 4.6', description: 'Best for everyday, complex tasks' },
+        { value: 'claude-sonnet-4-6', name: 'Sonnet 4.6', description: 'Efficient for routine tasks' },
+      ],
+    },
+    {
+      id: 'effort',
+      name: 'Effort',
+      category: 'thought_level',
+      type: 'select',
+      currentValue: 'default',
+      options: [
+        { value: 'default', name: 'Default' },
+        { value: 'low', name: 'Low' },
+        { value: 'medium', name: 'Medium' },
+        { value: 'high', name: 'High' },
+        { value: 'xhigh', name: 'Xhigh' },
+        { value: 'max', name: 'Max' },
+      ],
+    },
+  ],
+  codex: [
+    {
+      id: 'model',
+      name: 'Model',
+      category: 'model',
+      type: 'select',
+      currentValue: 'gpt-5-codex',
+      options: [
+        { value: 'gpt-5-codex', name: 'GPT-5 Codex', description: 'gpt-5-codex' },
+        { value: 'gpt-5-mini', name: 'GPT-5 Mini', description: 'gpt-5-mini' },
+      ],
+    },
+  ],
+  gemini: [
+    {
+      id: 'model',
+      name: 'Model',
+      category: 'model',
+      type: 'select',
+      currentValue: 'gemini-2.5-pro',
+      options: [
+        { value: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'gemini-2.5-pro' },
+        { value: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'gemini-2.5-flash' },
+      ],
+    },
+  ],
+};
+
+function synthesizeModelOption(agent: ChatAgent): ConfigOptionInfo | null {
+  if (!agent.models || agent.models.length === 0) return null;
+  return {
+    id: 'model',
+    name: 'Model',
+    category: 'model',
+    type: 'select',
+    currentValue: agent.activeModel || agent.models[0].id,
+    options: agent.models.map((m) => ({
+      value: m.id,
+      name: m.name || m.id,
+      description: m.provider,
+    })),
+  };
+}
+
 type ChatState = {
   sessions: ChatSessionInfo[];
   activeSessionId: string | null;
@@ -78,11 +196,16 @@ type ChatState = {
   activeTerminalId: string | null;
   restoring: boolean;
   lastRestoreError: ChatRestoreError | null;
+  isNewChat: boolean;
+  draftConfigByAgent: Record<string, Record<string, string>>;
+  lastConfigByAgent: Record<string, ConfigOptionInfo[]>;
 
   loadAgents: (agents: ChatAgent[]) => void;
   setSelectedAgent: (id: string) => void;
   createSession: (session: ChatSessionInfo) => void;
   setActiveSession: (id: string | null) => void;
+  startNewChat: (projectId?: string) => void;
+  cancelNewChat: () => void;
   addMessage: (sessionId: string, message: ChatMessage) => void;
   appendToLastMessage: (sessionId: string, chunk: string) => void;
   handleChatEvent: (sessionId: string, event: ChatEvent) => void;
@@ -142,6 +265,8 @@ type ChatState = {
    */
   setTerminalEnabled: (enabled: boolean) => Promise<boolean>;
   setActiveTerminalId: (id: string | null) => void;
+  setDraftConfigOption: (agentId: string, configId: string, value: string) => void;
+  getEffectiveConfigOptions: (agentId?: string | null) => ConfigOptionInfo[];
 };
 
 function updateSession(sessions: ChatSessionInfo[], id: string, updater: (s: ChatSessionInfo) => ChatSessionInfo): ChatSessionInfo[] {
@@ -265,6 +390,7 @@ function fallbackTitle(agentId: string, title?: string): string {
     pi: 'Pi',
     amp: 'Amp',
     copilot: 'Copilot',
+    antigravity: 'Google Antigravity',
   };
   const agentLabel = agentLabels[agentId] ?? agentId ?? 'Chat';
   return title && title.trim() ? title : agentLabel;
@@ -512,6 +638,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   browserSelectionCapture: null,
   restoring: false,
   lastRestoreError: null,
+  isNewChat: false,
+  draftConfigByAgent: {},
+  lastConfigByAgent: {},
 
   loadAgents: (agents) => set((state) => {
     const nextSelected = agents.some((agent) => agent.id === state.selectedAgentId && agent.available)
@@ -525,6 +654,73 @@ export const useChatStore = create<ChatState>((set, get) => ({
     writeStoredAgents(state.agents, id);
     return { selectedAgentId: id };
   }),
+
+  setDraftConfigOption: (agentId, configId, value) => set((state) => ({
+    draftConfigByAgent: {
+      ...state.draftConfigByAgent,
+      [agentId]: {
+        ...(state.draftConfigByAgent[agentId] ?? {}),
+        [configId]: value,
+      },
+    },
+  })),
+
+  getEffectiveConfigOptions: (targetAgentId) => {
+    const state = get();
+    const available = state.agents.filter((a) => a.available);
+    const agentId = targetAgentId
+      || state.selectedAgentId
+      || available[0]?.id
+      || 'antigravity';
+
+    const currentAgent = state.agents.find((a) => a.id === agentId);
+
+    // 1. Stored last known config from live sessions or replayed events
+    let base = state.lastConfigByAgent[agentId];
+
+    // 2. Fallback to any active session for this agent
+    if (!base || base.length === 0) {
+      const activeForAgent = state.sessions.find(
+        (s) => s.agentId === agentId && s.configOptions && s.configOptions.length > 0,
+      );
+      if (activeForAgent?.configOptions) {
+        base = activeForAgent.configOptions;
+      }
+    }
+
+    // 3. Fallback to DEFAULT_CONFIG_OPTIONS_BY_AGENT
+    if (!base || base.length === 0) {
+      base = DEFAULT_CONFIG_OPTIONS_BY_AGENT[agentId];
+    }
+
+    // 4. Fallback to synthesized from currentAgent.models
+    if ((!base || base.length === 0) && currentAgent) {
+      const synth = synthesizeModelOption(currentAgent);
+      if (synth) {
+        base = [synth];
+      }
+    }
+
+    if (!base || base.length === 0) {
+      return [];
+    }
+
+    const cloned: ConfigOptionInfo[] = base.map((opt) => ({
+      ...opt,
+      options: opt.options.map((o) => ({ ...o })),
+    }));
+
+    const draft = state.draftConfigByAgent[agentId];
+    if (draft) {
+      for (const opt of cloned) {
+        if (draft[opt.id] !== undefined) {
+          opt.currentValue = draft[opt.id];
+        }
+      }
+    }
+
+    return cloned;
+  },
 
   createSession: (session) => {
       const normalized = {
@@ -542,12 +738,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
       };
       return {
         sessions: nextState.sessions,
+        isNewChat: false,
         ...activateSessionState(nextState, normalized.id),
       };
     });
   },
 
-  setActiveSession: (id) => set((state) => activateSessionState(state, id)),
+  setActiveSession: (id) => set((state) => ({
+    ...activateSessionState(state, id),
+    isNewChat: id ? false : state.isNewChat,
+  })),
+
+  startNewChat: (projectId) => {
+    if (projectId) {
+      useWorkspaceStore.getState().setActiveProject(projectId);
+    }
+    set({ isNewChat: true, activeSessionId: null });
+  },
+
+  cancelNewChat: () => {
+    set({ isNewChat: false });
+  },
 
   addMessage: (sessionId, message) => {
     set((state) => ({
@@ -591,9 +802,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
     })),
 
   handleChatEvent: (sessionId, event) => {
-    set((state) => ({
-      sessions: updateSession(state.sessions, sessionId, (s) => {
-        const msgs = [...s.messages];
+    set((state) => {
+      let nextLastConfig = state.lastConfigByAgent;
+      if (event.type === 'config_options' && event.configOptions && event.configOptions.length > 0) {
+        const sess = state.sessions.find((s) => s.id === sessionId);
+        if (sess?.agentId) {
+          nextLastConfig = {
+            ...nextLastConfig,
+            [sess.agentId]: event.configOptions,
+          };
+        }
+      }
+      return {
+        lastConfigByAgent: nextLastConfig,
+        sessions: updateSession(state.sessions, sessionId, (s) => {
+          const msgs = [...s.messages];
         const last = msgs[msgs.length - 1];
         const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
         const eventAt = Date.now();
@@ -762,7 +985,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
         return { ...s, messages: msgs, lastEventAt: eventAt, stalled: false };
       }),
-    }));
+    };
+  });
   },
 
   finalizeAssistantMessage: () => {},
@@ -857,6 +1081,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const browserState = activeBrowserStateForWorkDir(get(), historyEntry?.workDir);
       const terminalState = terminalIntentAndEffective(get());
 
+      let sessionState: Awaited<ReturnType<typeof getChatSessionState>> | null = null;
+
       if (historyEntry?.workDir && historyEntry.agentId) {
         const connectingSession = withNoTabBrowserWarning({
           id: sessionId,
@@ -879,17 +1105,36 @@ export const useChatStore = create<ChatState>((set, get) => ({
         set((state) => ({
           sessions: [...state.sessions.filter((s) => s.id !== sessionId && s.recordId !== sessionId), connectingSession],
         }));
+
+        // Fetch persisted transcript and resume agent subprocess in parallel!
+        const statePromise = getChatSessionState(sessionId).catch(() => null);
+        const resumePromise = resumeChatSession(
+          sessionId,
+          historyEntry.agentId,
+          historyEntry.workDir,
+          historyEntry.acpSessionId,
+          terminalState.effective,
+          terminalState.effective ? terminalState.terminalId : undefined,
+          browserState.enabled,
+          browserState.tabId,
+        );
+
+        sessionState = await statePromise;
+        const quickReplayed = replaySessionState(sessionState?.messages ?? [], sessionState?.events ?? []);
+        const quickSnapshotCommands = parseSnapshotJson<SlashCommandInfo>(sessionState?.snapshot?.commandsJson);
+        const quickSnapshotConfig = parseSnapshotJson<ConfigOptionInfo>(sessionState?.snapshot?.configOptsJson);
+        set((state) => ({
+          sessions: updateSession(state.sessions, sessionId, (s) => ({
+            ...s,
+            title: quickReplayed.title ?? s.title,
+            messages: quickReplayed.messages,
+            commands: quickReplayed.commands ?? quickSnapshotCommands ?? s.commands,
+            configOptions: quickReplayed.configOptions ?? quickSnapshotConfig ?? s.configOptions,
+          })),
+        }));
+
         try {
-          const resumed = await resumeChatSession(
-            sessionId,
-            historyEntry.agentId,
-            historyEntry.workDir,
-            historyEntry.acpSessionId,
-            terminalState.effective,
-            terminalState.effective ? terminalState.terminalId : undefined,
-            browserState.enabled,
-            browserState.tabId,
-          );
+          const resumed = await resumePromise;
           if ('id' in resumed) {
             liveSessionId = resumed.id;
             kind = 'resumable';
@@ -900,12 +1145,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
         } catch {
           kind = 'archived';
         }
+      } else {
+        sessionState = await getChatSessionState(sessionId).catch(() => null);
       }
 
-      const sessionState = await getChatSessionState(sessionId);
-      const replayed = replaySessionState(sessionState.messages ?? [], sessionState.events ?? []);
-      const snapshotCommands = parseSnapshotJson<SlashCommandInfo>(sessionState.snapshot?.commandsJson);
-      const snapshotConfig = parseSnapshotJson<ConfigOptionInfo>(sessionState.snapshot?.configOptsJson);
+      const replayed = replaySessionState(sessionState?.messages ?? [], sessionState?.events ?? []);
+      const snapshotCommands = parseSnapshotJson<SlashCommandInfo>(sessionState?.snapshot?.commandsJson);
+      const snapshotConfig = parseSnapshotJson<ConfigOptionInfo>(sessionState?.snapshot?.configOptsJson);
+
       // Recompute in case user toggled mid-flight; still write INTENT to session.
       const browserStateFinal = activeBrowserStateForWorkDir(get(), historyEntry?.workDir);
       const terminalStateFinal = terminalIntentAndEffective(get());
@@ -1124,6 +1371,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   restoreSessionForProject: async (projectPath, preferredSessionId) => {
     if (!projectPath) return;
+    if (get().isNewChat) return;
 
     set({ restoring: true, lastRestoreError: null });
     try {
@@ -1174,6 +1422,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
       let acpSessionId: string | undefined = restore.acpSessionId;
       const restoreAgentId = restore.agentId;
 
+      const sessionState = await getChatSessionState(targetSessionId).catch(() => null);
+      const historyEntry = get().historySessions.find((h) => h.id === targetSessionId);
+      const replayed = sessionState ? replaySessionState(sessionState.messages ?? [], sessionState.events ?? []) : { messages: [] as ChatMessage[] };
+      const snapshotCommands = sessionState ? parseSnapshotJson<SlashCommandInfo>(sessionState.snapshot?.commandsJson) : undefined;
+      const snapshotConfig = sessionState ? parseSnapshotJson<ConfigOptionInfo>(sessionState.snapshot?.configOptsJson) : undefined;
+
       if (restore.isLive) {
         liveSessionId = restore.liveSessionId ?? targetSessionId;
         kind = 'live';
@@ -1185,8 +1439,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
           id: targetSessionId,
           recordId: targetSessionId,
           agentId: restoreAgentId,
-          title: fallbackTitle(restoreAgentId, restore.title),
-          messages: [],
+          title: replayed.title ?? fallbackTitle(restoreAgentId, restore.title),
+          messages: replayed.messages,
           status: 'connecting',
           createdAt: Date.now(),
           kind: 'archived',
@@ -1198,6 +1452,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
           browserSelection: browserState.selection,
           browserSelectionMode: browserState.selectionMode,
           browserSelectionCapture: browserState.selectionCapture,
+          commands: replayed.commands ?? snapshotCommands,
+          configOptions: replayed.configOptions ?? snapshotConfig,
+          contextWindow: replayed.contextWindow,
+          contextUsed: replayed.contextUsed,
+          costAmount: replayed.costAmount,
+          costCurrency: replayed.costCurrency,
         }, browserState.intent, browserState.tabId);
         set((state) => ({
           sessions: [...state.sessions.filter((s) => s.id !== targetSessionId && s.recordId !== targetSessionId), connectingSession],
@@ -1224,13 +1484,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
           kind = 'archived';
         }
       }
-
-      const sessionState = await getChatSessionState(targetSessionId).catch(() => null);
-      const historyEntry = get().historySessions.find((h) => h.id === targetSessionId);
-
-      const replayed = sessionState ? replaySessionState(sessionState.messages ?? [], sessionState.events ?? []) : { messages: [] as ChatMessage[] };
-      const snapshotCommands = sessionState ? parseSnapshotJson<SlashCommandInfo>(sessionState.snapshot?.commandsJson) : undefined;
-      const snapshotConfig = sessionState ? parseSnapshotJson<ConfigOptionInfo>(sessionState.snapshot?.configOptsJson) : undefined;
 
       const restoreWorkDir = restore.workDir ?? historyEntry?.workDir ?? projectPath;
       const browserStateFinal = activeBrowserStateForWorkDir(get(), restoreWorkDir);

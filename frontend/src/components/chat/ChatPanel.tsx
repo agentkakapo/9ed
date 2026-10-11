@@ -1,5 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useRef, useState } from 'react';
 import { normalizeWorkDir, sessionBelongsToWorkDir, useChatStore } from '../../stores/chat';
 import { useWorkspaceStore } from '../../stores/workspace';
 import { useChatSession } from '../../hooks/useChatSession';
@@ -9,9 +8,47 @@ import { ChatInput } from './ChatInput';
 import { ChatQueue } from './ChatQueue';
 import { PermissionDialog } from './PermissionDialog';
 import { ConfigBar } from './AgentPicker';
-import { ChatTabs } from './ChatTabs';
 import { ChatSessionList } from './ChatSessionList';
+import { NewChatBar } from './NewChatBar';
+import { AgentIcon } from './AgentIcon';
 import type { ChatSessionInfo } from '../../types';
+
+function NewChatHero({ onPromptSelect }: { onPromptSelect: (text: string) => void }) {
+  const suggestions = [
+    { title: 'Explain this codebase', desc: 'Overview of project structure and architecture' },
+    { title: 'Find bugs & edge cases', desc: 'Inspect recent changes and spot potential issues' },
+    { title: 'Run tests & fix errors', desc: 'Execute the test suite and resolve failures' },
+    { title: 'Implement a new feature', desc: 'Plan and write code with full test coverage' },
+  ];
+
+  return (
+    <div className="new-chat-hero">
+      <div className="new-chat-hero-icon" aria-hidden="true">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d97757" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" stroke="#d97757" strokeOpacity="0.3" strokeWidth="1" fill="#d97757" fillOpacity="0.08" />
+          <path d="m10 15 5-3-5-3v6Z" fill="#d97757" stroke="none" />
+        </svg>
+      </div>
+      <h2 className="new-chat-hero-title">What can I help you build?</h2>
+      <p className="new-chat-hero-subtitle">
+        Select a project and branch below, or start with a common task:
+      </p>
+      <div className="new-chat-suggestions-grid">
+        {suggestions.map((s) => (
+          <button
+            key={s.title}
+            type="button"
+            className="new-chat-suggestion-card"
+            onClick={() => onPromptSelect(s.title)}
+          >
+            <span className="suggestion-card-title">{s.title}</span>
+            <span className="suggestion-card-desc">{s.desc}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const AGENT_RETRY_DELAYS_MS = [500, 1500, 4000];
 
@@ -22,49 +59,38 @@ function formatDebugTimestamp(timestamp: number): string {
 
 function ChatDebugIcon() {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M7 4h6l1 2h2a1 1 0 0 1 1 1v6a3 3 0 0 1-3 3h-1l-2 2h-2l-2-2H6a3 3 0 0 1-3-3V7a1 1 0 0 1 1-1h2l1-2Z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+      <path d="M7 4h6l1 2h2a1 1 0 0 1 1 1v6a3 3 0 0 1-3 3h-1l-2 2h-2l-2-2H6a3 3 0 0 1-3-3V7a1 1 0 0 1 1-1h2l1-2Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
       <circle cx="8" cy="10" r="1.2" fill="currentColor" />
       <circle cx="12" cy="10" r="1.2" fill="currentColor" />
     </svg>
   );
 }
 
-function ContextUsageBar({ contextUsed, contextWindow, costAmount, costCurrency }: { contextUsed?: number; contextWindow?: number; costAmount?: number; costCurrency?: string }) {
-  if (!contextUsed || !contextWindow || contextWindow <= 0) return null;
-
-  const pct = Math.min((contextUsed / contextWindow) * 100, 100);
-  const usedK = (contextUsed / 1000).toFixed(1).replace(/\.0$/, '');
-  const windowK = (contextWindow / 1000).toFixed(0);
-  const pctDisplay = pct.toFixed(0);
-
-  let barColor = 'var(--ctx-bar-low)';
-  if (pct > 80) barColor = 'var(--ctx-bar-high, #ef4444)';
-  else if (pct > 60) barColor = 'var(--ctx-bar-mid, #f59e0b)';
-
-  const costStr = costAmount && costAmount > 0 ? `${costCurrency === 'USD' ? '$' : costCurrency ? costCurrency + ' ' : '$'}${costAmount.toFixed(4)}` : '';
-
+function SidebarToggleIcon() {
   return (
-    <div className="ctx-usage" title={`${contextUsed.toLocaleString()} / ${contextWindow.toLocaleString()} tokens`}>
-      <div className="ctx-usage-label">
-        <span className="ctx-usage-icon">🧠</span>
-        <span className="ctx-usage-text">{usedK}k / {windowK}k</span>
-        <span className="ctx-usage-pct">{pctDisplay}%</span>
-        {costStr && <span className="ctx-usage-cost">{costStr}</span>}
-      </div>
-      <div className="ctx-usage-track">
-        <div className="ctx-usage-fill" style={{ width: `${pct}%`, background: barColor }} />
-      </div>
-    </div>
+    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.4" />
+      <line x1="8" y1="3" x2="8" y2="17" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
   );
 }
 
-export function ChatPanel() {
+export type ChatPanelProps = {
+  auxiliaryToggles?: React.ReactNode;
+  onToggleSidebar?: () => void;
+  sidebarVisible?: boolean;
+};
+
+export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }: ChatPanelProps = {}) {
   const activeSessionId = useChatStore((s) => s.activeSessionId);
   const activeProject = useWorkspaceStore((s) => s.projects.find((p) => p.id === s.activeProjectId) ?? null);
   const agents = useChatStore((s) => s.agents);
   const sessions = useChatStore((s) => s.sessions);
+  const historySessions = useChatStore((s) => s.historySessions);
+  const loadHistorySession = useChatStore((s) => s.loadHistorySession);
   const activeSessionByWorkDir = useChatStore((s) => s.activeSessionByWorkDir);
+  const selectedAgentId = useChatStore((s) => s.selectedAgentId);
   const setSelectedAgent = useChatStore((s) => s.setSelectedAgent);
   const useActiveTerminal = useChatStore((s) => s.useActiveTerminal);
   const useActiveBrowser = useChatStore((s) => s.useActiveBrowser);
@@ -75,17 +101,13 @@ export function ChatPanel() {
   const loadAgents = useChatStore((s) => s.loadAgents);
   const createSessionStore = useChatStore((s) => s.createSession);
   const setActiveSession = useChatStore((s) => s.setActiveSession);
-  const deleteSessionStore = useChatStore((s) => s.deleteSession);
   const resumeSession = useChatStore((s) => s.resumeSession);
   const restoring = useChatStore((s) => s.restoring);
   const lastRestoreError = useChatStore((s) => s.lastRestoreError);
   const { sendMessage, cancel, setConfigOption, respondPermission, rejectPermission, setAutoApprove, connected } = useChatSession();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const autoResumeKeysRef = useRef<Set<string>>(new Set());
-  const createMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const [creating, setCreating] = useState(false);
-  const [createMenuOpen, setCreateMenuOpen] = useState(false);
-  const [createMenuStyle, setCreateMenuStyle] = useState<Record<string, string>>({});
   const [agentsLoading, setAgentsLoading] = useState(agents.length === 0);
   const [agentsError, setAgentsError] = useState<string | null>(null);
   const [showChatDebugPanel, setShowChatDebugPanel] = useState(false);
@@ -104,7 +126,8 @@ export function ChatPanel() {
   const canResumeArchived = Boolean(activeSession?.kind === 'archived' && activeSession.agentId && activeSession.workDir);
   // ADR-0005 VAL-PTY-007: pass the lock holder so ChatInput disables + shows banner.
   const lockedBy = activeSession?.inputLocked ? activeSession.lockedBy : undefined;
-  const showConfigBar = !isArchived || isConnecting || restoring;
+  const isNewChat = useChatStore((s) => s.isNewChat);
+  const showConfigBar = !isArchived || isConnecting || restoring || !activeSession;
   const lastLiveToolCall = activeSession
     ? [...activeSession.messages].reverse().find((message) => message.role === 'tool_call' && message.toolCall)
     : undefined;
@@ -165,13 +188,26 @@ export function ChatPanel() {
   useEffect(() => {
     if (!activeProject) return;
     if (activeSession) return;
+    if (isNewChat) return;
 
     const remembered = projectSessions.find((session) => session.id === rememberedProjectSessionId);
     const fallback = remembered ?? projectSessions[projectSessions.length - 1] ?? null;
     if ((activeSessionId ?? null) !== (fallback?.id ?? null)) {
       setActiveSession(fallback?.id ?? null);
+      return;
     }
-  }, [activeProject?.path, activeSession, activeSessionId, projectSessionIds, projectSessions, rememberedProjectSessionId, setActiveSession]);
+
+    if (projectSessions.length === 0 && !restoring) {
+      const projectHistory = historySessions.filter((h) => sessionBelongsToWorkDir(h, activeProject.path));
+      if (projectHistory.length > 0) {
+        const latest = projectHistory[0];
+        if (latest && !autoResumeKeysRef.current.has(latest.id)) {
+          autoResumeKeysRef.current.add(latest.id);
+          void loadHistorySession(latest.id).catch(() => {});
+        }
+      }
+    }
+  }, [activeProject?.path, activeSession, activeSessionId, historySessions, isNewChat, loadHistorySession, projectSessionIds, projectSessions, rememberedProjectSessionId, restoring, setActiveSession]);
 
   const messages = activeSession?.messages;
   const lastMsgContent = messages?.[messages.length - 1]?.content;
@@ -185,98 +221,58 @@ export function ChatPanel() {
     }
   }, [activeSession?.stalled]);
 
-  useLayoutEffect(() => {
-    if (!createMenuOpen || !createMenuButtonRef.current) return;
+  const handleSend = async (content: string, attachments?: import('./ChatInput').Attachment[]) => {
+    if (!activeSession) {
+      const available = agents.filter((a) => a.available);
+      const agentId = (selectedAgentId && agents.some((a) => a.id === selectedAgentId && a.available))
+        ? selectedAgentId
+        : (available[0]?.id ?? 'antigravity');
 
-    const updatePosition = () => {
-      if (!createMenuButtonRef.current) return;
-      const rect = createMenuButtonRef.current.getBoundingClientRect();
-      const width = Math.min(280, Math.max(220, Math.floor(window.innerWidth * 0.72)));
-      const left = Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12));
-      const top = Math.min(rect.bottom + 6, window.innerHeight - 24);
-      const maxHeight = Math.max(160, Math.min(320, window.innerHeight - top - 12));
-      setCreateMenuStyle({
-        position: 'fixed',
-        top: `${top}px`,
-        left: `${left}px`,
-        width: `${width}px`,
-        maxHeight: `${maxHeight}px`,
-      });
-    };
+      const agent = agents.find((a) => a.id === agentId);
+      if (!agent) return;
 
-    updatePosition();
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
-    return () => {
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
-    };
-  }, [createMenuOpen]);
-
-  useEffect(() => {
-    if (!createMenuOpen) return;
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (createMenuButtonRef.current?.contains(target)) return;
-      const overlay = document.querySelector('.chat-agent-create-dropdown');
-      if (overlay?.contains(target)) return;
-      setCreateMenuOpen(false);
-    };
-
-    document.addEventListener('mousedown', handlePointerDown);
-    return () => document.removeEventListener('mousedown', handlePointerDown);
-  }, [createMenuOpen]);
-
-  const handleNewChat = async (agentId: string) => {
-    const agent = agents.find((a) => a.id === agentId);
-    if (!agent?.available) return;
-
-    setSelectedAgent(agentId);
-    setCreateMenuOpen(false);
-    setCreating(true);
-    try {
-      const terminalEnabled = useActiveTerminal && !!activeTerminalId;
-      const browserTabId = activeProject?.activeBrowserTabId ?? null;
-      const browserEnabled = useActiveBrowser && !!browserTabId;
-      const created = await createChatSession(agentId, activeProject?.path, terminalEnabled, terminalEnabled ? activeTerminalId : undefined, browserEnabled, browserTabId);
-      const session: ChatSessionInfo = {
-        id: created.id,
-        recordId: created.resumedFrom ?? created.id,
-        agentId,
-        title: agent.label ?? 'Chat',
-        messages: [],
-        status: 'idle',
-        createdAt: Date.now(),
-        kind: 'live',
-        workDir: created.workDir ?? activeProject?.path,
-        acpSessionId: created.acpSessionId,
-        useActiveTerminal: terminalEnabled,
-        terminalId: terminalEnabled ? activeTerminalId : undefined,
-        useActiveBrowser: browserEnabled,
-        browserSelection: browserEnabled ? browserSelection : null,
-        browserSelectionMode,
-        browserSelectionCapture: browserEnabled ? browserSelectionCapture : null,
-      };
-      createSessionStore(session);
-    } catch {
-    } finally {
-      setCreating(false);
+      setSelectedAgent(agentId);
+      setCreating(true);
+      try {
+        const terminalEnabled = useActiveTerminal && !!activeTerminalId;
+        const browserTabId = activeProject?.activeBrowserTabId ?? null;
+        const browserEnabled = useActiveBrowser && !!browserTabId;
+        const draftConfig = useChatStore.getState().draftConfigByAgent[agentId];
+        const draftModel = draftConfig?.['model'];
+        const effectiveConfigOptions = useChatStore.getState().getEffectiveConfigOptions(agentId);
+        const created = draftModel
+          ? await createChatSession(agentId, activeProject?.path, terminalEnabled, terminalEnabled ? activeTerminalId : undefined, browserEnabled, browserTabId, draftModel)
+          : await createChatSession(agentId, activeProject?.path, terminalEnabled, terminalEnabled ? activeTerminalId : undefined, browserEnabled, browserTabId);
+        const session: ChatSessionInfo = {
+          id: created.id,
+          recordId: created.resumedFrom ?? created.id,
+          agentId,
+          title: content.slice(0, 32) || agent.label || 'Chat',
+          messages: [],
+          status: 'idle',
+          createdAt: Date.now(),
+          kind: 'live',
+          workDir: created.workDir ?? activeProject?.path,
+          acpSessionId: created.acpSessionId,
+          configOptions: effectiveConfigOptions,
+          useActiveTerminal: terminalEnabled,
+          terminalId: terminalEnabled ? activeTerminalId : undefined,
+          useActiveBrowser: browserEnabled,
+          browserSelection: browserEnabled ? browserSelection : null,
+          browserSelectionMode,
+          browserSelectionCapture: browserEnabled ? browserSelectionCapture : null,
+        };
+        createSessionStore(session);
+        setActiveSession(session.id);
+        useChatStore.getState().cancelNewChat();
+        void sendMessage(content, undefined, attachments);
+      } catch (err) {
+        console.error('Failed to auto-create chat session on send:', err);
+      } finally {
+        setCreating(false);
+      }
+      return;
     }
-  };
-
-  const availableAgents = agents.filter((agent) => agent.available);
-  const canCreateChat = !creating && !agentsLoading && availableAgents.length > 0;
-
-  const handleCloseTab = (sessionId: string) => {
-    const idx = projectSessions.findIndex((s) => s.id === sessionId);
-    if (activeSessionId === sessionId) {
-      const fallback = projectSessions[idx + 1] ?? projectSessions[idx - 1] ?? null;
-      setActiveSession(fallback?.id ?? null);
-    }
-    deleteSessionStore(sessionId);
-  };
-
-  const handleSend = (content: string, attachments?: import('./ChatInput').Attachment[]) => {
     sendMessage(content, undefined, attachments);
   };
 
@@ -303,67 +299,44 @@ export function ChatPanel() {
     <div className="chat-panel">
       <div className="chat-header">
         <div className="chat-tab-session-area">
-          <ChatTabs
-            tabs={projectSessions}
-            activeTabId={activeSessionId}
-            agents={agents}
-            onSelectTab={setActiveSession}
-            onCloseTab={handleCloseTab}
-          />
+          {!sidebarVisible && onToggleSidebar && (
+            <button
+              className="topbar-btn sidebar-expand-btn"
+              onClick={onToggleSidebar}
+              type="button"
+              title="Expand sidebar (Ctrl+B)"
+            >
+              <SidebarToggleIcon />
+            </button>
+          )}
+          <div className="center-session-info">
+            <span className="session-project-tag">{activeProject?.name ?? '9ed'}</span>
+            <span className="session-title-divider">/</span>
+            <span className="session-title-text">{activeSession ? (activeSession.title || 'Chat') : 'New Chat'}</span>
+            {activeSession && (
+              <span className="center-agent-badge" data-agent={activeSession.agentId}>
+                <span className="center-agent-glyph">
+                  <AgentIcon agentId={activeSession.agentId} size={13} />
+                </span>
+                <span>{agents.find((a) => a.id === activeSession.agentId)?.label ?? activeSession.agentId}</span>
+              </span>
+            )}
+          </div>
         </div>
         <div className="chat-header-actions">
           <ChatSessionList />
           {activeSession && (
             <button
-              className={`chat-new-btn chat-new-btn-icon${showChatDebugPanel ? ' active' : ''}`}
               type="button"
-              title={showChatDebugPanel ? 'Hide chat debug panel' : 'Show chat debug panel'}
-              aria-label={showChatDebugPanel ? 'Hide chat debug panel' : 'Show chat debug panel'}
+              className={`pane-toggle-btn chat-debug-btn${showChatDebugPanel ? ' active' : ''}`}
+              title={showChatDebugPanel ? 'Hide chat debug log' : 'Show chat debug log'}
+              aria-label={showChatDebugPanel ? 'Hide chat debug log' : 'Show chat debug log'}
               onClick={() => setShowChatDebugPanel((value) => !value)}
             >
-              <span className="chat-debug-btn-icon"><ChatDebugIcon /></span>
+              <ChatDebugIcon />
             </button>
           )}
-          <div className="chat-agent-create-wrap">
-            <button
-              ref={createMenuButtonRef}
-              className="chat-new-btn chat-new-btn-icon"
-              onClick={() => canCreateChat && setCreateMenuOpen((open) => !open)}
-              type="button"
-              aria-label={creating ? 'Creating new chat' : 'New chat'}
-              aria-haspopup="menu"
-              aria-expanded={createMenuOpen}
-              title={creating ? 'Creating new chat...' : agentsLoading ? 'Loading agents...' : 'New chat'}
-              disabled={!canCreateChat}
-            >
-              {creating ? <span className="chat-connecting-spinner chat-inline-spinner" /> : '+'}
-            </button>
-            {createMenuOpen ? createPortal(
-              <div
-                className="picker-dropdown picker-dropdown-overlay chat-agent-create-dropdown"
-                data-overlay="true"
-                role="menu"
-                aria-label="Create chat with agent"
-                style={createMenuStyle}
-              >
-                {agents.map((agent) => (
-                  <button
-                    key={agent.id}
-                    className="picker-dropdown-item chat-agent-create-item"
-                    data-available={agent.available ? 'true' : 'false'}
-                    onClick={() => agent.available && void handleNewChat(agent.id)}
-                    disabled={!agent.available || creating}
-                    type="button"
-                    role="menuitem"
-                  >
-                    <span>{agent.label}</span>
-                    {!agent.available && <span className="chat-agent-create-unavailable">Unavailable</span>}
-                  </button>
-                ))}
-              </div>,
-              document.body,
-            ) : null}
-          </div>
+          {auxiliaryToggles}
         </div>
       </div>
 
@@ -383,7 +356,9 @@ export function ChatPanel() {
             </div>
           </div>
         ) : !activeSession ? (
-          <div className="chat-empty">Press + to start a chat</div>
+          <div className="chat-messages chat-messages-new-chat">
+            <NewChatHero onPromptSelect={handleSend} />
+          </div>
         ) : (
           <div className="chat-messages">
             {showChatDebugPanel && (
@@ -481,24 +456,29 @@ export function ChatPanel() {
         )}
       </div>
       <div className="chat-bottom-bar">
-        <ContextUsageBar contextUsed={activeSession?.contextUsed} contextWindow={activeSession?.contextWindow} costAmount={activeSession?.costAmount} costCurrency={activeSession?.costCurrency} />
         {!isArchived && activeSession && <ChatQueue sessionId={activeSession.id} onSendNow={handleSend} />}
-        {showConfigBar && (
-          <ConfigBar
-            setConfigOption={setConfigOption}
-            setAutoApprove={setAutoApprove}
-            connected={connected}
-            busy={isConnecting || restoring}
-            busyLabel={configBusyLabel}
-          />
-        )}
         <ChatInput
           onSend={handleSend}
           onCancel={cancel}
           streaming={isStreaming}
           disabled={(isArchived && !canResumeArchived) || isConnecting}
-          canSend={connected}
+          canSend={!activeSession ? true : connected}
           lockedBy={lockedBy}
+          placeholder={!activeSession ? 'Describe a task or ask a question' : 'Type / for commands'}
+          topContent={!activeSession ? <NewChatBar /> : undefined}
+          footer={showConfigBar ? ({ openFilePicker, toggleVoice, voiceActive, voiceSupported }) => (
+            <ConfigBar
+              setConfigOption={setConfigOption}
+              setAutoApprove={setAutoApprove}
+              connected={connected}
+              busy={isConnecting || restoring}
+              busyLabel={configBusyLabel}
+              onAttach={openFilePicker}
+              onToggleVoice={toggleVoice}
+              voiceActive={voiceActive}
+              voiceSupported={voiceSupported}
+            />
+          ) : undefined}
         />
       </div>
     </div>

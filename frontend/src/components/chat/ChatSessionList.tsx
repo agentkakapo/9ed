@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { sessionBelongsToWorkDir, useChatStore } from '../../stores/chat';
 import { deleteChatSession } from '../../api';
 import { useWorkspaceStore } from '../../stores/workspace';
+import { AgentIcon } from './AgentIcon';
 
 const agentLabels: Record<string, string> = {
   opencode: 'OpenCode',
@@ -12,6 +13,7 @@ const agentLabels: Record<string, string> = {
   pi: 'Pi',
   amp: 'Amp',
   copilot: 'Copilot',
+  antigravity: 'Google Antigravity',
 };
 
 function formatSessionTitle(agentId: string, title: string): string {
@@ -30,6 +32,15 @@ function SessionStatusIcon({ status, kind }: { status: string; kind: string }) {
     case 'error': return <span className="session-status-icon session-status-error" title="Error">✗</span>;
     default: return null;
   }
+}
+
+function HistoryIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.4" />
+      <polyline points="10,6 10,10 13,12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 export function ChatSessionList() {
@@ -64,15 +75,37 @@ export function ChatSessionList() {
       const rect = triggerRef.current.getBoundingClientRect();
       const width = Math.min(320, Math.max(250, Math.floor(window.innerWidth * 0.72)));
       const left = Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12));
-      const top = Math.min(rect.bottom + 6, window.innerHeight - 24);
-      const maxHeight = Math.max(180, Math.min(320, window.innerHeight - top - 12));
-      setOverlayStyle({
-        position: 'fixed',
-        top: `${top}px`,
-        left: `${left}px`,
-        width: `${width}px`,
-        maxHeight: `${maxHeight}px`,
-      });
+      const gap = 6;
+      const aboveSpace = Math.max(0, rect.top - 12 - gap);
+      const belowSpace = Math.max(0, window.innerHeight - rect.bottom - 12 - gap);
+      const opensUpward = aboveSpace >= 180 && aboveSpace > belowSpace;
+      const heightCap = 360;
+
+      if (opensUpward) {
+        const bottom = window.innerHeight - rect.top + gap;
+        const maxHeight = Math.max(120, Math.min(heightCap, aboveSpace));
+        setOverlayStyle({
+          position: 'fixed',
+          bottom: `${bottom}px`,
+          left: `${left}px`,
+          width: `${width}px`,
+          maxHeight: `${maxHeight}px`,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        });
+      } else {
+        const top = rect.bottom + gap;
+        const maxHeight = Math.max(120, Math.min(heightCap, belowSpace));
+        setOverlayStyle({
+          position: 'fixed',
+          top: `${top}px`,
+          left: `${left}px`,
+          width: `${width}px`,
+          maxHeight: `${maxHeight}px`,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        });
+      }
     };
 
     updatePosition();
@@ -99,7 +132,7 @@ export function ChatSessionList() {
   }, [open]);
 
   const projectSessions = sessions.filter((session) => sessionBelongsToWorkDir(session, activeProject?.path));
-  const activeSessionIds = new Set(projectSessions.map((s) => s.id));
+  const activeSessionIds = new Set(projectSessions.flatMap((s) => [s.id, s.recordId].filter((id): id is string => Boolean(id))));
   const activeAcpSessionIds = new Set(projectSessions.map((s) => s.acpSessionId).filter(Boolean));
   const pastSessions = historySessions.filter((h) => !activeSessionIds.has(h.id) && (!h.acpSessionId || !activeAcpSessionIds.has(h.acpSessionId)));
 
@@ -124,6 +157,7 @@ export function ChatSessionList() {
           key={session.id}
           className={`chat-session-row${session.id === activeSessionId ? ' active' : ''}`}
         >
+          <AgentIcon agentId={session.agentId} size={15} />
           <SessionStatusIcon status={session.status} kind={session.kind} />
           <button
             className="chat-session-row-btn"
@@ -160,6 +194,7 @@ export function ChatSessionList() {
       )}
       {pastSessions.map((hist) => (
         <div key={hist.id} className="chat-session-row chat-session-row-history">
+          <AgentIcon agentId={hist.agentId} size={15} style={{ opacity: 0.7 }} />
           {hist.acpSessionId && (
             <span className="session-status-icon session-status-resumable" title="ACP session — resumable">↻</span>
           )}
@@ -205,13 +240,18 @@ export function ChatSessionList() {
     <div className="chat-picker-wrap chat-session-wrap">
       <button
         ref={triggerRef}
-        className="chat-history-btn"
+        className={`pane-toggle-btn chat-history-btn${open ? ' active' : ''}`}
         onClick={() => !loadingHistorySessionId && setOpen(!open)}
         type="button"
         title="Chat history"
+        aria-label="Chat history"
         disabled={loadingHistorySessionId !== null}
       >
-        {loadingHistorySessionId ? <span className="chat-connecting-spinner chat-inline-spinner" /> : '📋'}
+        {loadingHistorySessionId ? (
+          <span className="chat-connecting-spinner chat-inline-spinner" />
+        ) : (
+          <HistoryIcon />
+        )}
       </button>
       {open ? createPortal(dropdownContent, document.body) : null}
     </div>

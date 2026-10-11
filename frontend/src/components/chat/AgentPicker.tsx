@@ -3,6 +3,12 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { sessionBelongsToWorkDir, useChatStore } from '../../stores/chat';
 import { useWorkspaceStore } from '../../stores/workspace';
 import type { ConfigOptionInfo } from '../../types';
+import { ModelDropdown } from './ModelDropdown';
+import { EffortSlider } from './EffortSlider';
+import { UsageRing } from './UsageRing';
+import { MicIcon } from './ChatInput';
+import { AgentIcon } from './AgentIcon';
+import { cleanOptionName, hasModelEfforts, normalizeConfigOption, splitModelAndEffort, type EffortLevel } from './modelEffort';
 
 export function AgentPicker() {
   const agents = useChatStore((s) => s.agents);
@@ -29,15 +35,37 @@ export function AgentPicker() {
       const rect = triggerRef.current.getBoundingClientRect();
       const width = Math.min(260, Math.max(220, Math.floor(window.innerWidth * 0.28)));
       const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
-      const top = Math.min(rect.bottom + 6, window.innerHeight - 24);
-      const maxHeight = Math.max(160, Math.min(280, window.innerHeight - top - 12));
-      setOverlayStyle({
-        position: 'fixed',
-        top: `${top}px`,
-        left: `${left}px`,
-        width: `${width}px`,
-        maxHeight: `${maxHeight}px`,
-      });
+      const gap = 6;
+      const aboveSpace = Math.max(0, rect.top - 12 - gap);
+      const belowSpace = Math.max(0, window.innerHeight - rect.bottom - 12 - gap);
+      const opensUpward = aboveSpace >= 140 || aboveSpace > belowSpace;
+      const heightCap = 280;
+
+      if (opensUpward) {
+        const bottom = window.innerHeight - rect.top + gap;
+        const maxHeight = Math.max(100, Math.min(heightCap, aboveSpace));
+        setOverlayStyle({
+          position: 'fixed',
+          bottom: `${bottom}px`,
+          left: `${left}px`,
+          width: `${width}px`,
+          maxHeight: `${maxHeight}px`,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        });
+      } else {
+        const top = rect.bottom + gap;
+        const maxHeight = Math.max(100, Math.min(heightCap, belowSpace));
+        setOverlayStyle({
+          position: 'fixed',
+          top: `${top}px`,
+          left: `${left}px`,
+          width: `${width}px`,
+          maxHeight: `${maxHeight}px`,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        });
+      }
     };
 
     updatePosition();
@@ -74,7 +102,8 @@ export function AgentPicker() {
           disabled={!agent.available}
           type="button"
         >
-          {agent.label}
+          <AgentIcon agentId={agent.id} size={15} />
+          <span>{agent.label}</span>
         </button>
       ))}
     </div>,
@@ -89,6 +118,7 @@ export function AgentPicker() {
         onClick={() => setOpen(!open)}
         type="button"
       >
+        <AgentIcon agentId={selectedAgentId} size={14} />
         <span className="agent-picker-label">{buttonLabel}</span>
         <span className="agent-picker-caret" aria-hidden="true">▾</span>
       </button>
@@ -103,11 +133,29 @@ type ConfigBarProps = {
   connected?: boolean;
   busy?: boolean;
   busyLabel?: string | null;
+  onAttach?: () => void;
+  onToggleVoice?: () => void;
+  voiceActive?: boolean;
+  voiceSupported?: boolean;
 };
 
 // `connected` remains in the public prop API (ChatPanel still passes it) but soft
 // MCP toggles are no longer gated on WS connection / idle hard-restart safety.
-export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connected = false, busy = false, busyLabel = null }: ConfigBarProps) {
+export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connected = false, busy = false, busyLabel = null, onAttach, onToggleVoice, voiceActive = false, voiceSupported = false }: ConfigBarProps) {
+  const [extrasOpen, setExtrasOpen] = useState(false);
+  const extrasRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!extrasOpen) return;
+    const onDown = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      if (!target) return;
+      if (extrasRef.current?.contains(target)) return;
+      if (target.closest?.('.picker-dropdown-overlay')) return;
+      setExtrasOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [extrasOpen]);
   const activeSessionId = useChatStore((s) => s.activeSessionId);
   const sessions = useChatStore((s) => s.sessions);
   const activeProject = useWorkspaceStore((s) => s.projects.find((p) => p.id === s.activeProjectId) ?? null);
@@ -120,11 +168,26 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
   const useActiveTerminal = useChatStore((s) => s.useActiveTerminal);
   const setTerminalEnabled = useChatStore((s) => s.setTerminalEnabled);
   const activeTerminalId = useChatStore((s) => s.activeTerminalId);
+  const agents = useChatStore((s) => s.agents);
+  const selectedAgentId = useChatStore((s) => s.selectedAgentId);
+  const draftConfigByAgent = useChatStore((s) => s.draftConfigByAgent);
+  const setDraftConfigOption = useChatStore((s) => s.setDraftConfigOption);
+  const getEffectiveConfigOptions = useChatStore((s) => s.getEffectiveConfigOptions);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   const activeSession = sessions.find((s) => s.id === activeSessionId && sessionBelongsToWorkDir(s, activeProject?.path));
-  const configOptions = activeSession?.configOptions ?? [];
   const hasActiveSession = !!activeSession;
+
+  const currentAgent = (selectedAgentId ? agents.find((a) => a.id === selectedAgentId && a.available) : undefined)
+    ?? agents.find((a) => a.available)
+    ?? agents[0];
+
+  const effectiveOptions = useMemo(() => {
+    if (activeSession) {
+      return activeSession.configOptions ?? [];
+    }
+    return getEffectiveConfigOptions(currentAgent?.id);
+  }, [activeSession, currentAgent?.id, getEffectiveConfigOptions, draftConfigByAgent]);
   const activeBrowserTabId = activeProject?.activeBrowserTabId ?? null;
   const browserCurrentEnabled = !!(activeSession?.useActiveBrowser ?? useActiveBrowser);
   const terminalCurrentEnabled = !!(activeSession?.useActiveTerminal ?? (useActiveTerminal && !!activeTerminalId));
@@ -153,7 +216,11 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
     : 'Enable or disable the active terminal MCP bridge for this agent session';
   const handleChange = (configId: string, value: string) => {
     setOpenDropdown(null);
-    setConfigOption?.(configId, value);
+    if (hasActiveSession) {
+      setConfigOption?.(configId, value);
+    } else if (currentAgent) {
+      setDraftConfigOption(currentAgent.id, configId, value);
+    }
   };
 
   const handleAutoApproveToggle = () => {
@@ -182,69 +249,173 @@ export function ConfigBar({ setConfigOption, setAutoApprove, connected: _connect
     void setTerminalEnabled(enabled);
   };
 
+  const normalizedOptions = useMemo(() => effectiveOptions.map(normalizeConfigOption), [effectiveOptions]);
+  const modelOpt = normalizedOptions.find((opt) => isModelOption(opt));
+  const effortSplitting = useMemo(() => {
+    if (!modelOpt || !hasModelEfforts(modelOpt)) return null;
+    return splitModelAndEffort(modelOpt);
+  }, [modelOpt]);
+
+  const isEffortOption = (opt: ConfigOptionInfo) => {
+    const id = opt.id.toLowerCase();
+    return !isModelOption(opt) && (id.includes('effort') || id.includes('thought'));
+  };
+  const effortOpt = normalizedOptions.find(isEffortOption);
+  const modeOpt = normalizedOptions.find((opt) => !isModelOption(opt) && !isEffortOption(opt) && opt.id.toLowerCase().includes('mode'));
+  const extraOpts = normalizedOptions.filter((opt) => opt !== modelOpt && opt !== effortOpt && opt !== modeOpt);
+  const dropdownProps = (id: string) => ({
+    isOpen: openDropdown === id,
+    onToggle: () => setOpenDropdown(openDropdown === id ? null : id),
+    onClose: () => setOpenDropdown(null),
+    disabled: busy,
+  });
+
+  const toggleRow = (
+    label: string,
+    title: string,
+    checked: boolean,
+    onChange: () => void,
+    disabled: boolean,
+    extraClass = '',
+    disabledClass = false,
+  ) => (
+    <label
+      className={`chat-config-toggle${extraClass ? ` ${extraClass}` : ''}${checked ? ' active' : ''}${disabledClass ? ' disabled' : ''}`}
+      title={title}
+    >
+      <input type="checkbox" checked={checked} onChange={onChange} disabled={disabled} />
+      <span className="chat-config-toggle-label">{label}</span>
+      <span className="chat-config-switch" aria-hidden="true" />
+    </label>
+  );
+
   return (
-    <div className="chat-config-bar">
-      {busyLabel && (
-        <div className="chat-config-status" aria-live="polite">
-          <span className="chat-connecting-spinner chat-inline-spinner" />
-          <span className="chat-config-status-label">{busyLabel}</span>
+    <div className="chat-footer-bar">
+      <div className="chat-footer-left">
+        <div className="chat-extras-wrap" ref={extrasRef}>
+          <button
+            type="button"
+            className={`chat-footer-action-btn chat-extras-btn${extrasOpen ? ' active' : ''}`}
+            onClick={() => setExtrasOpen((v) => !v)}
+            title="Attachments and options"
+            aria-label="Attachments and options"
+            aria-haspopup="menu"
+            aria-expanded={extrasOpen}
+          >
+            +
+          </button>
+          <div className={`chat-extras-popover${extrasOpen ? ' open' : ''}`} role="menu">
+            {onAttach && (
+              <button
+                type="button"
+                className="chat-extras-item"
+                onClick={() => { setExtrasOpen(false); onAttach(); }}
+              >
+                Attach file or image
+              </button>
+            )}
+            {toggleRow(
+              'Browser',
+              browserToggleTitle,
+              browserCurrentEnabled,
+              handleBrowserToggle,
+              busy || (!!activeSession && !browserToggleEnabled),
+              'chat-config-toggle-mcp',
+              !!activeSession && !browserToggleEnabled,
+            )}
+            {toggleRow(
+              'Terminal',
+              terminalToggleTitle,
+              terminalCurrentEnabled,
+              handleTerminalToggle,
+              busy || !terminalToggleEnabled,
+              'chat-config-toggle-mcp',
+              !terminalToggleEnabled,
+            )}
+            {toggleRow('@ ignored', 'Include gitignored files in @ mentions', includeIgnored, toggleIncludeIgnored, busy)}
+            {toggleRow('Auto-approve', 'Auto-approve all tool permissions (yolo mode)', autoApprove, handleAutoApproveToggle, busy)}
+            {extraOpts.map((opt) => (
+              <ConfigDropdown
+                key={opt.id}
+                option={opt}
+                variant={getConfigDropdownVariant(opt)}
+                {...dropdownProps(opt.id)}
+                onChange={(value) => handleChange(opt.id, value)}
+              />
+            ))}
+          </div>
         </div>
-      )}
-      {configOptions.map((opt) => (
-        <ConfigDropdown
-          key={opt.id}
-          option={opt}
-          variant={getConfigDropdownVariant(opt)}
-          isOpen={!hasActiveSession ? false : openDropdown === opt.id}
-          onToggle={() => hasActiveSession && setOpenDropdown(openDropdown === opt.id ? null : opt.id)}
-          onChange={(value) => handleChange(opt.id, value)}
-          disabled={!hasActiveSession || busy}
+        {voiceSupported && onToggleVoice && (
+          <button
+            type="button"
+            className={`chat-footer-action-btn chat-mic-btn${voiceActive ? ' active' : ''}`}
+            onClick={onToggleVoice}
+            title={voiceActive ? 'Stop voice input' : 'Voice input'}
+            aria-label={voiceActive ? 'Stop voice input' : 'Voice input'}
+          >
+            <MicIcon />
+          </button>
+        )}
+        {modeOpt && (
+          <ConfigDropdown
+            option={modeOpt}
+            variant="compact"
+            {...dropdownProps(modeOpt.id)}
+            onChange={(value) => handleChange(modeOpt.id, value)}
+          />
+        )}
+        {busyLabel && (
+          <div className="chat-config-status" aria-live="polite">
+            <span className="chat-connecting-spinner chat-inline-spinner" />
+            <span className="chat-config-status-label">{busyLabel}</span>
+          </div>
+        )}
+      </div>
+      <div className="chat-footer-right">
+        {modelOpt && (effortSplitting ? (
+          <>
+            <ModelDropdown
+              option={effortSplitting.baseModelOption}
+              {...dropdownProps(modelOpt.id)}
+              onChange={(baseName) => {
+                handleChange(modelOpt.id, effortSplitting.resolveModelValue(baseName, effortSplitting.currentEffort));
+              }}
+            />
+            <EffortSlider
+              option={effortSplitting.effortOption}
+              {...dropdownProps(`${modelOpt.id}_effort`)}
+              onChange={(newEffort) => {
+                handleChange(modelOpt.id, effortSplitting.resolveModelValue(effortSplitting.currentBaseModel, newEffort as EffortLevel));
+              }}
+            />
+          </>
+        ) : (
+          <ModelDropdown
+            option={modelOpt}
+            {...dropdownProps(modelOpt.id)}
+            onChange={(value) => handleChange(modelOpt.id, value)}
+          />
+        ))}
+        {effortOpt && (
+          <EffortSlider
+            option={effortOpt}
+            {...dropdownProps(effortOpt.id)}
+            onChange={(value) => handleChange(effortOpt.id, value)}
+          />
+        )}
+        <UsageRing
+          contextUsed={activeSession?.contextUsed}
+          contextWindow={activeSession?.contextWindow}
+          costAmount={activeSession?.costAmount}
+          costCurrency={activeSession?.costCurrency}
         />
-      ))}
-      <label className="chat-config-toggle" title="Auto-approve all tool permissions (yolo mode)">
-        <input
-          type="checkbox"
-          checked={autoApprove}
-          onChange={handleAutoApproveToggle}
-          disabled={busy}
-        />
-        <span className="chat-config-toggle-label">🔓 Auto</span>
-      </label>
-      <label className="chat-config-toggle" title="Include gitignored files in @ mentions">
-        <input
-          type="checkbox"
-          checked={includeIgnored}
-          onChange={toggleIncludeIgnored}
-          disabled={busy}
-        />
-        <span className="chat-config-toggle-label">@ ignored</span>
-      </label>
-      <label
-        className={`chat-config-toggle chat-config-toggle-mcp${browserCurrentEnabled ? ' active' : ''}${activeSession && !browserToggleEnabled ? ' disabled' : ''}`}
-        title={browserToggleTitle}
-      >
-        <input
-          type="checkbox"
-          checked={browserCurrentEnabled}
-          onChange={handleBrowserToggle}
-          disabled={busy || (!!activeSession && !browserToggleEnabled)}
-        />
-        <span className="chat-config-toggle-label">Browser</span>
-      </label>
-      <label
-        className={`chat-config-toggle chat-config-toggle-mcp${terminalCurrentEnabled ? ' active' : ''}${!terminalToggleEnabled ? ' disabled' : ''}`}
-        title={terminalToggleTitle}
-      >
-        <input
-          type="checkbox"
-          checked={terminalCurrentEnabled}
-          onChange={handleTerminalToggle}
-          disabled={busy || !terminalToggleEnabled}
-        />
-        <span className="chat-config-toggle-label">Terminal</span>
-      </label>
+      </div>
     </div>
   );
+}
+
+function isModelOption(option: ConfigOptionInfo): boolean {
+  return option.id.toLowerCase().includes('model');
 }
 
 type ConfigDropdownVariant = 'compact' | 'rich';
@@ -254,18 +425,36 @@ function getConfigDropdownVariant(option: ConfigOptionInfo): ConfigDropdownVaria
   return 'compact';
 }
 
-function ConfigDropdown({ option, variant, isOpen, onToggle, onChange, disabled }: {
+function ConfigDropdown({ option: rawOption, variant, isOpen, onToggle, onClose, onChange, disabled }: {
   option: ConfigOptionInfo;
   variant: ConfigDropdownVariant;
   isOpen: boolean;
   onToggle: () => void;
+  onClose?: () => void;
   onChange: (value: string) => void;
   disabled?: boolean;
 }) {
+  const option = useMemo(() => normalizeConfigOption(rawOption), [rawOption]);
   const currentOption = option.options.find((o) => o.value === option.currentValue);
-  const label = currentOption?.name ?? option.currentValue;
+  const rawLabel = currentOption?.name ?? option.currentValue;
+  const label = cleanOptionName(rawLabel, option.id, currentOption?.description);
+  const displayLabel = label;
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
   const [overlayStyle, setOverlayStyle] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (triggerRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      onClose?.();
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [isOpen, onClose]);
 
   useLayoutEffect(() => {
     if (!isOpen || !triggerRef.current) return;
@@ -325,18 +514,27 @@ function ConfigDropdown({ option, variant, isOpen, onToggle, onChange, disabled 
   }, [isOpen, variant]);
 
   const dropdown = createPortal(
-    <div className={`picker-dropdown picker-dropdown-overlay picker-dropdown-${variant}`} data-overlay="true" style={overlayStyle}>
-      {option.options.map((val) => (
-        <button
-          key={val.value}
-          className="picker-dropdown-item"
-          data-active={val.value === option.currentValue ? 'true' : 'false'}
-          onClick={() => onChange(val.value)}
-          type="button"
-        >
-          {val.name}
-        </button>
-      ))}
+    <div
+      ref={dropdownRef}
+      className={`picker-dropdown picker-dropdown-overlay picker-dropdown-${variant}`}
+      data-overlay="true"
+      style={overlayStyle}
+    >
+      {option.options.map((val) => {
+        const itemName = cleanOptionName(val.name, option.id, val.description);
+        const isSelected = val.value === option.currentValue || itemName === label;
+        return (
+          <button
+            key={val.value}
+            className="picker-dropdown-item"
+            data-active={isSelected ? 'true' : 'false'}
+            onClick={() => onChange(val.value)}
+            type="button"
+          >
+            {itemName}
+          </button>
+        );
+      })}
     </div>,
     document.body,
   );
@@ -352,7 +550,7 @@ function ConfigDropdown({ option, variant, isOpen, onToggle, onChange, disabled 
         title={option.name}
         disabled={disabled}
       >
-        <span className={`agent-picker-label ${variant === 'rich' ? 'agent-picker-label-multiline' : 'agent-picker-label-compact'}`}>{label}</span>
+        <span className={`agent-picker-label ${variant === 'rich' ? 'agent-picker-label-multiline' : 'agent-picker-label-compact'}`}>{displayLabel}</span>
         <span className="agent-picker-caret" aria-hidden="true">▾</span>
       </button>
       {isOpen ? dropdown : null}
