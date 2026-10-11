@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { sessionBelongsToWorkDir, useChatStore } from '../../stores/chat';
 import { deleteChatSession } from '../../api';
 import { useWorkspaceStore } from '../../stores/workspace';
+import { AgentIcon } from './AgentIcon';
 
 const agentLabels: Record<string, string> = {
   opencode: 'OpenCode',
@@ -156,6 +157,7 @@ export function ChatSessionList() {
           key={session.id}
           className={`chat-session-row${session.id === activeSessionId ? ' active' : ''}`}
         >
+          <AgentIcon agentId={session.agentId} size={15} />
           <SessionStatusIcon status={session.status} kind={session.kind} />
           <button
             className="chat-session-row-btn"
@@ -192,6 +194,7 @@ export function ChatSessionList() {
       )}
       {pastSessions.map((hist) => (
         <div key={hist.id} className="chat-session-row chat-session-row-history">
+          <AgentIcon agentId={hist.agentId} size={15} style={{ opacity: 0.7 }} />
           {hist.acpSessionId && (
             <span className="session-status-icon session-status-resumable" title="ACP session — resumable">↻</span>
           )}

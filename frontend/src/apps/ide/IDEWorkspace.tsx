@@ -14,6 +14,7 @@ import { GitPanel } from '../../components/git/GitPanel';
 import { EditorArea } from '../../components/editor/EditorArea';
 import { TerminalPanel } from '../../components/terminal/TerminalPanel';
 import { ChatPanel } from '../../components/chat/ChatPanel';
+import { AgentIcon } from '../../components/chat/AgentIcon';
 import { BrowserPanel } from '../../components/browser/BrowserPanel';
 import { SettingsPanel } from '../../components/settings/SettingsPanel';
 import { BottomNav, type MobileView } from '../../components/shared/BottomNav';
@@ -130,17 +131,6 @@ function SidebarToggleIcon() {
     </svg>
   );
 }
-
-const agentGlyphs: Record<string, string> = {
-  antigravity: '◈',
-  claude: '⚑',
-  codex: '⚡',
-  gemini: '✦',
-  pi: 'π',
-  amp: '▲',
-  copilot: '⬡',
-  opencode: '⌥',
-};
 
 type RightPaneType = 'editor' | 'terminal' | 'browser' | 'git' | null;
 
@@ -410,7 +400,7 @@ export function IDEWorkspace() {
               <span className="sidebar-new-chat-plus">+</span>
               <span className="sidebar-new-chat-text">New Chat</span>
               <span className="sidebar-new-chat-agent">
-                {selectedAgentId ? (agentGlyphs[selectedAgentId] ?? '◈') : '◈'}
+                <AgentIcon agentId={selectedAgentId ?? 'antigravity'} size={14} />
               </span>
             </button>
           </div>

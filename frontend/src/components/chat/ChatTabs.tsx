@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatSessionInfo, ChatAgent } from '../../types';
+import { AgentIcon } from './AgentIcon';
 
 type ChatTabsProps = {
   tabs: ChatSessionInfo[];
@@ -15,20 +16,6 @@ const statusLabel: Record<ChatSessionInfo['status'], string> = {
   streaming: 'Working',
   error: 'Error',
 };
-
-function agentIcon(agentId: string): string {
-  const icons: Record<string, string> = {
-    opencode: '⚡',
-    claude: '🤖',
-    codex: '🔷',
-    gemini: '✦',
-    pi: 'π',
-    amp: '⚡',
-    copilot: '✈',
-    antigravity: '◈',
-  };
-  return icons[agentId] ?? '💬';
-}
 
 function tabTitle(tab: ChatSessionInfo): string {
   if (tab.title && tab.title !== tab.agentId) return tab.title;
@@ -114,7 +101,9 @@ export function ChatTabs({ tabs, activeTabId, agents, onSelectTab, onCloseTab }:
                 role="tab"
                 type="button"
               >
-                <span className="chat-tab-chip-icon" aria-hidden="true">{agentIcon(tab.agentId)}</span>
+                <span className="chat-tab-chip-icon" aria-hidden="true">
+                  <AgentIcon agentId={tab.agentId} size={14} />
+                </span>
                 <span className="chat-tab-chip-copy">
                   <span className="chat-tab-chip-title">{tabTitle(tab)}</span>
                   <small>{agent?.label ?? tab.agentId} · {tabStatusText(tab)}</small>

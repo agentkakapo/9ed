@@ -10,6 +10,7 @@ import { PermissionDialog } from './PermissionDialog';
 import { ConfigBar } from './AgentPicker';
 import { ChatSessionList } from './ChatSessionList';
 import { NewChatBar } from './NewChatBar';
+import { AgentIcon } from './AgentIcon';
 import type { ChatSessionInfo } from '../../types';
 
 function NewChatHero({ onPromptSelect }: { onPromptSelect: (text: string) => void }) {
@@ -65,17 +66,6 @@ function ChatDebugIcon() {
     </svg>
   );
 }
-
-const agentGlyphs: Record<string, string> = {
-  antigravity: '◈',
-  claude: '⚑',
-  codex: '⚡',
-  gemini: '✦',
-  pi: 'π',
-  amp: '▲',
-  copilot: '⬡',
-  opencode: '⌥',
-};
 
 function SidebarToggleIcon() {
   return (
@@ -325,7 +315,9 @@ export function ChatPanel({ auxiliaryToggles, onToggleSidebar, sidebarVisible }:
             <span className="session-title-text">{activeSession ? (activeSession.title || 'Chat') : 'New Chat'}</span>
             {activeSession && (
               <span className="center-agent-badge" data-agent={activeSession.agentId}>
-                <span className="center-agent-glyph">{agentGlyphs[activeSession.agentId] ?? '◈'}</span>
+                <span className="center-agent-glyph">
+                  <AgentIcon agentId={activeSession.agentId} size={13} />
+                </span>
                 <span>{agents.find((a) => a.id === activeSession.agentId)?.label ?? activeSession.agentId}</span>
               </span>
             )}

@@ -7,6 +7,7 @@ import { ModelDropdown } from './ModelDropdown';
 import { EffortSlider } from './EffortSlider';
 import { UsageRing } from './UsageRing';
 import { MicIcon } from './ChatInput';
+import { AgentIcon } from './AgentIcon';
 import { cleanOptionName, hasModelEfforts, normalizeConfigOption, splitModelAndEffort, type EffortLevel } from './modelEffort';
 
 export function AgentPicker() {
@@ -101,7 +102,8 @@ export function AgentPicker() {
           disabled={!agent.available}
           type="button"
         >
-          {agent.label}
+          <AgentIcon agentId={agent.id} size={15} />
+          <span>{agent.label}</span>
         </button>
       ))}
     </div>,
@@ -116,6 +118,7 @@ export function AgentPicker() {
         onClick={() => setOpen(!open)}
         type="button"
       >
+        <AgentIcon agentId={selectedAgentId} size={14} />
         <span className="agent-picker-label">{buttonLabel}</span>
         <span className="agent-picker-caret" aria-hidden="true">▾</span>
       </button>

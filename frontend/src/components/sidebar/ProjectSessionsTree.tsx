@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useWorkspaceStore } from '../../stores/workspace';
 import { normalizeWorkDir, sessionBelongsToWorkDir, useChatStore } from '../../stores/chat';
 import { deleteChatSession } from '../../api';
+import { AgentIcon } from '../chat/AgentIcon';
 
 const agentLabels: Record<string, string> = {
   antigravity: 'Google Antigravity',
@@ -12,28 +13,6 @@ const agentLabels: Record<string, string> = {
   pi: 'Pi',
   amp: 'Amp',
   copilot: 'Copilot',
-};
-
-const agentGlyphs: Record<string, string> = {
-  antigravity: '◈',
-  claude: '⚑',
-  codex: '⚡',
-  gemini: '✦',
-  pi: 'π',
-  amp: '▲',
-  copilot: '⬡',
-  opencode: '⌥',
-};
-
-const agentColors: Record<string, string> = {
-  antigravity: '#38bdf8', // cyan
-  claude: '#f59e0b',      // amber
-  codex: '#10b981',       // emerald
-  gemini: '#60a5fa',      // sky blue
-  opencode: '#818cf8',    // indigo
-  pi: '#c084fc',          // purple
-  amp: '#f43f5e',         // rose
-  copilot: '#3b82f6',     // blue
 };
 
 function formatSessionTitle(agentId: string, title?: string): string {
@@ -202,8 +181,6 @@ export function ProjectSessionsTree() {
               <div className="project-sessions-list">
                 {liveSessions.map((session) => {
                   const isActive = session.id === activeSessionId && isActiveProject;
-                  const glyph = agentGlyphs[session.agentId] ?? '◈';
-                  const color = agentColors[session.agentId] ?? '#38bdf8';
                   const isStreaming = session.status === 'streaming';
                   const isConnecting = session.status === 'connecting';
                   const isError = session.status === 'error' || session.crashed;
@@ -215,8 +192,8 @@ export function ProjectSessionsTree() {
                       onClick={() => handleSelectSession(project.id, session.id)}
                       title={`${session.agentId} • ${session.title}`}
                     >
-                      <span className="session-tree-glyph" style={{ color }} aria-hidden="true">
-                        {glyph}
+                      <span className="session-tree-glyph" aria-hidden="true">
+                        <AgentIcon agentId={session.agentId} size={14} />
                       </span>
                       <span className="session-tree-title">
                         {formatSessionTitle(session.agentId, session.title)}
@@ -245,8 +222,6 @@ export function ProjectSessionsTree() {
                 })}
 
                 {histSessions.map((hist) => {
-                  const glyph = agentGlyphs[hist.agentId] ?? '◈';
-                  const color = agentColors[hist.agentId] ?? '#94a3b8';
                   const isLoading = loadingSessionId === hist.id;
 
                   return (
@@ -256,8 +231,8 @@ export function ProjectSessionsTree() {
                       onClick={() => void handleSelectHistorySession(project.id, hist.id)}
                       title={`History: ${hist.agentId} • ${hist.title}`}
                     >
-                      <span className="session-tree-glyph" style={{ color }} aria-hidden="true">
-                        {glyph}
+                      <span className="session-tree-glyph" aria-hidden="true">
+                        <AgentIcon agentId={hist.agentId} size={14} style={{ opacity: 0.7 }} />
                       </span>
                       <span className="session-tree-title history-title">
                         {formatSessionTitle(hist.agentId, hist.title)}
@@ -316,7 +291,6 @@ export function ProjectSessionsTree() {
           </div>
           <div className="project-sessions-list">
             {orphanedHistory.map((hist: import('../../types').HistorySessionRecord) => {
-              const glyph = agentGlyphs[hist.agentId] ?? '◈';
               return (
                 <div
                   key={hist.id}
@@ -328,7 +302,9 @@ export function ProjectSessionsTree() {
                   }}
                   title={hist.title}
                 >
-                  <span className="session-tree-glyph" style={{ color: '#64748b' }}>{glyph}</span>
+                  <span className="session-tree-glyph" aria-hidden="true">
+                    <AgentIcon agentId={hist.agentId} size={14} style={{ opacity: 0.7 }} />
+                  </span>
                   <span className="session-tree-title history-title">{hist.title}</span>
                   <button
                     type="button"
